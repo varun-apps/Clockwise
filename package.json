@@ -1,0 +1,21 @@
+{
+  "name": "clockwise",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ClockWise — multi-agent AI trip planner (monorepo root)",
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "codegen": "openapi-typescript openapi.json -o apps/web/src/api/generated.ts",
+    "web:dev": "pnpm --filter @clockwise/web dev",
+    "web:build": "pnpm --filter @clockwise/web build",
+    "web:typecheck": "pnpm --filter @clockwise/web typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.0",
+    "openapi-typescript": "^7.9.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,82 @@
+# ClockWise task orchestrator — requires go-task (https://taskfile.dev)
+#   macOS: brew install go-task/tap/go-task
+# Each task below has an equivalent raw command noted, so `task` is a
+# convenience, not a hard dependency.
+version: "3"
+
+env:
+  API_DIR: apps/api
+  WEB_DIR: apps/web
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install all deps (Python via uv, JS via pnpm)
+    cmds:
+      - cd {{.API_DIR}} && uv sync
+      - pnpm install
+
+  up:
+    desc: Start Postgres + Langfuse via docker-compose
+    cmds:
+      - docker compose up -d
+
+  down:
+    desc: Stop docker-compose services
+    cmds:
+      - docker compose down
+
+  migrate:
+    desc: Run Alembic migrations
+    cmds:
+      - cd {{.API_DIR}} && uv run alembic upgrade head
+
+  api:
+    desc: Run the FastAPI dev server (hot reload)
+    cmds:
+      - cd {{.API_DIR}} && uv run uvicorn clockwise_api.main:app --reload --port 8000
+
+  web:
+    desc: Run the Vite dev server
+    cmds:
+      - pnpm --filter @clockwise/web dev
+
+  dev:
+    desc: Bring up infra, then run api + web together
+    deps: [up]
+    cmds:
+      - task: api
+      - task: web
+
+  codegen:
+    desc: Dump FastAPI OpenAPI schema and regenerate the typed TS client
+    cmds:
+      - cd {{.API_DIR}} && uv run python -m clockwise_api.openapi_export ../../openapi.json
+      - pnpm run codegen
+
+  lint:
+    desc: Lint both stacks
+    cmds:
+      - cd {{.API_DIR}} && uv run ruff check .
+      - pnpm run lint
+
+  format:
+    desc: Format both stacks
+    cmds:
+      - cd {{.API_DIR}} && uv run ruff format .
+      - pnpm run format
+
+  typecheck:
+    desc: Type-check both stacks
+    cmds:
+      - cd {{.API_DIR}} && uv run mypy src
+      - pnpm run web:typecheck
+
+  test:
+    desc: Run backend tests (offline, on mocks)
+    cmds:
+      - cd {{.API_DIR}} && uv run pytest

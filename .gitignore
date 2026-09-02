@@ -141,3 +141,24 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# ---------- ClockWise / Python ----------
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+apps/api/.venv/
+docs/*
+
+# Generated contract-sync artifacts
+# openapi.json is transient; the generated TS client IS committed so the web app
+# type-checks/builds standalone (regenerate with `task codegen`).
+openapi.json
+
+# uv
+.uv/
