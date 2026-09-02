@@ -7,10 +7,11 @@ traced.
 **Stack:** FastAPI · LangGraph · LangMem¹ · DeepSeek V4 Flash (via an
 OpenAI-compatible gateway) · React + TanStack · Langfuse · Postgres.
 
-> ¹ Memory, human-in-the-loop, and the eval harness are on the roadmap — see
-> [Scope](#scope). This repo currently implements **Phases 0–3**:
+> ¹ Memory and the eval harness are on the roadmap — see [Scope](#scope). This
+> repo currently implements **Phases 0–4**:
 > `query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
-> itinerary → final`, with the tool specialists running in **parallel fan-out**,
+> itinerary → human review → final`, with the tool specialists running in
+> **parallel fan-out** and a **resumable human-in-the-loop** approval step,
 > end-to-end and traceable.
 >
 > Architecture diagrams: open [`clockwise-architecture.html`](./clockwise-architecture.html)
@@ -136,15 +137,23 @@ packages/shared   shared TS constants (node/agent names)
 
 ## Scope
 
-**Implemented (Phases 0–3):** monorepo + tooling + contract sync · FastAPI +
+**Implemented (Phases 0–4):** monorepo + tooling + contract sync · FastAPI +
 Postgres/SQLite + Langfuse + LLM gateway · full LangGraph orchestration —
-guardrail → supervisor → **parallel** flight/hotel/weather specialists →
-budget → itinerary → final — with a checkpointer · in-process tools
-(AviationStack/Tavily/weather) with frozen fixtures · React UI showing flights,
-hotels, budget, and the itinerary.
+guardrail → supervisor → **parallel** flight/hotel/weather → budget →
+itinerary → **human review** → final — with a checkpointer · in-process tools
+(AviationStack/Tavily/weather) with frozen fixtures · hardened guardrail
+(relevance/safety/policy/validity/injection) · **resumable HITL** (`interrupt` +
+`/plan/resume` for approve / request-changes) · React UI with flights, hotels,
+budget, itinerary, and the approve / request-changes review step.
 
-**Roadmap (Phases 4–8):** human-in-the-loop (`interrupt`/resume) · LangMem
-memory · full chat + streaming UI · evaluation harness & model-tiering
-experiment · Hostinger deploy. The state shape, model-tiering hook,
-mock-fixture pattern, and checkpointer are already in place so each phase is
-additive. See [`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).
+**Execution model:** the review pause is **synchronous + checkpoint-resumed**,
+not worker-backed — `/plan` runs to the `interrupt()` and returns
+`awaiting_review` (connection closes); `/plan/resume` rehydrates from the
+checkpoint by `thread_id` and continues. A background worker is deferred to
+Phase 8 if load demands it.
+
+**Roadmap (Phases 5–8):** LangMem memory · full chat + streaming UI ·
+evaluation harness & model-tiering experiment · Hostinger deploy. The state
+shape, model-tiering hook, mock-fixture pattern, and checkpointer are already in
+place so each phase is additive. See
+[`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).

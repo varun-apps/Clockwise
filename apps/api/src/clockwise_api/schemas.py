@@ -13,7 +13,8 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 AgentName = Literal["flight", "hotel", "weather", "budget", "itinerary"]
-PlanStatus = Literal["completed", "blocked"]
+PlanStatus = Literal["completed", "blocked", "awaiting_review"]
+ReviewAction = Literal["approve", "request_changes"]
 
 
 class HealthResponse(BaseModel):
@@ -83,6 +84,14 @@ class PlanRequest(BaseModel):
     query: str = Field(min_length=1, description="Free-text trip request")
     conversation_id: uuid.UUID | None = Field(
         default=None, description="Continue an existing conversation, or omit to start one"
+    )
+
+
+class ResumeRequest(BaseModel):
+    conversation_id: uuid.UUID = Field(description="The paused conversation to resume")
+    action: ReviewAction = Field(description="approve the itinerary or request changes")
+    feedback: str | None = Field(
+        default=None, description="What to change (used when action is request_changes)"
     )
 
 

@@ -3,11 +3,15 @@ r"""Assemble the LangGraph orchestration graph.
     START -> guardrail -(PASS)-> supervisor -(fan-out)-> [flight|hotel|weather]
                        \-(BLOCK)-> END          (parallel)        |
                                                                   v
-                                        END <- final <- itinerary <- budget
+       END <- final <-(approve)- human_review <- itinerary <- budget
+                          |                          ^
+                          \--(request_changes)-------/
 
 The supervisor conditionally fans out to the selected tool specialists, which
 run in parallel and merge into TravelState; budget is the fan-in convergence
-node, then itinerary drafts the reviewable plan and final summarizes.
+node, then itinerary drafts the reviewable plan. human_review interrupt()s for
+approval: approve -> final summary, request_changes -> loop back to itinerary
+with feedback. final summarizes.
 
 Compiled with a checkpointer (Postgres in prod, in-memory in tests). The
 checkpointer is foundational, not optional: it is what makes Phase 4's HITL
@@ -25,6 +29,7 @@ from .nodes.final import final_node
 from .nodes.flight import flight_node
 from .nodes.guardrail import guardrail_node, route_after_guardrail
 from .nodes.hotel import hotel_node
+from .nodes.human_review import human_review_node, route_after_review
 from .nodes.itinerary import itinerary_node
 from .nodes.supervisor import route_to_specialists, supervisor_node
 from .nodes.weather import weather_node
@@ -48,6 +53,7 @@ def build_graph(checkpointer: BaseCheckpointSaver[Any]) -> CompiledStateGraph[An
     builder.add_node("weather", weather_node)
     builder.add_node("budget", budget_node)
     builder.add_node("itinerary", itinerary_node)
+    builder.add_node("human_review", human_review_node)
     builder.add_node("final", final_node)
 
     builder.add_edge(START, "guardrail")
@@ -66,7 +72,13 @@ def build_graph(checkpointer: BaseCheckpointSaver[Any]) -> CompiledStateGraph[An
     for specialist in _SPECIALISTS:
         builder.add_edge(specialist, "budget")
     builder.add_edge("budget", "itinerary")
-    builder.add_edge("itinerary", "final")
+    builder.add_edge("itinerary", "human_review")
+    # HITL: approve -> final; request_changes -> re-draft the itinerary.
+    builder.add_conditional_edges(
+        "human_review",
+        route_after_review,
+        {"final": "final", "itinerary": "itinerary"},
+    )
     builder.add_edge("final", END)
 
     return builder.compile(checkpointer=checkpointer)

@@ -1,18 +1,24 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
-import { getHealth, type PlanResponse, postPlan } from "../api/client";
+import { getHealth, type PlanResponse, postPlan, postResume } from "../api/client";
 
 export function Home() {
   const [query, setQuery] = useState("Plan a 4 day trip to Dubai next month");
+  const [result, setResult] = useState<PlanResponse | null>(null);
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
-  const plan = useMutation({ mutationFn: postPlan });
+
+  const plan = useMutation({ mutationFn: postPlan, onSuccess: setResult });
+  const resume = useMutation({ mutationFn: postResume, onSuccess: setResult });
+
+  const busy = plan.isPending || resume.isPending;
+  const error = (plan.error ?? resume.error) as Error | null;
 
   return (
     <main style={styles.page}>
       <header style={styles.header}>
         <h1 style={styles.h1}>ClockWise</h1>
-        <p style={styles.sub}>Multi-agent trip planner — thin vertical slice</p>
+        <p style={styles.sub}>Multi-agent trip planner — with human review</p>
         {health.data && (
           <span style={styles.badge}>
             LLM: {health.data.llm_mode} · Langfuse: {health.data.langfuse}
@@ -34,14 +40,67 @@ export function Home() {
           style={styles.textarea}
           placeholder="Describe your trip…"
         />
-        <button type="submit" style={styles.button} disabled={plan.isPending}>
+        <button type="submit" style={styles.button} disabled={busy}>
           {plan.isPending ? "Planning…" : "Plan my trip"}
         </button>
       </form>
 
-      {plan.isError && <p style={styles.error}>{(plan.error as Error).message}</p>}
-      {plan.data && <PlanView data={plan.data} />}
+      {error && <p style={styles.error}>{error.message}</p>}
+      {result && <PlanView data={result} />}
+      {result?.status === "awaiting_review" && (
+        <ReviewActions
+          busy={busy}
+          onApprove={() =>
+            resume.mutate({ conversation_id: result.conversation_id, action: "approve" })
+          }
+          onRequestChanges={(feedback) =>
+            resume.mutate({
+              conversation_id: result.conversation_id,
+              action: "request_changes",
+              feedback,
+            })
+          }
+        />
+      )}
     </main>
+  );
+}
+
+function ReviewActions({
+  busy,
+  onApprove,
+  onRequestChanges,
+}: {
+  busy: boolean;
+  onApprove: () => void;
+  onRequestChanges: (feedback: string) => void;
+}) {
+  const [feedback, setFeedback] = useState("");
+  return (
+    <section style={styles.review}>
+      <strong>Review the draft itinerary</strong>
+      <p style={styles.muted}>Approve it, or request changes with a note.</p>
+      <div style={styles.reviewRow}>
+        <button type="button" style={styles.approve} onClick={onApprove} disabled={busy}>
+          {busy ? "Working…" : "Approve"}
+        </button>
+      </div>
+      <textarea
+        value={feedback}
+        onChange={(e) => setFeedback(e.target.value)}
+        rows={2}
+        style={styles.textarea}
+        placeholder="What should change? (e.g. add a beach day)"
+      />
+      <button
+        type="button"
+        style={styles.changes}
+        onClick={() => onRequestChanges(feedback)}
+        disabled={busy || !feedback.trim()}
+      >
+        Request changes
+      </button>
+    </section>
   );
 }
 
@@ -160,6 +219,36 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     border: "1px solid #d3dae3",
     background: "#fff",
+  },
+  review: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    border: "1px dashed #d9730d",
+    background: "rgba(217,115,13,0.05)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+  },
+  reviewRow: { display: "flex", gap: 10 },
+  approve: {
+    background: "#2f9e63",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    padding: "10px 18px",
+    fontSize: 15,
+    cursor: "pointer",
+  },
+  changes: {
+    alignSelf: "flex-start",
+    background: "#fff",
+    color: "#d9730d",
+    border: "1px solid #d9730d",
+    borderRadius: 8,
+    padding: "8px 16px",
+    fontSize: 14,
+    cursor: "pointer",
   },
   summaryText: { fontSize: 16, lineHeight: 1.5, marginTop: 0 },
   reasoning: { color: "#5b6472", fontStyle: "italic" },

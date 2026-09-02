@@ -31,6 +31,10 @@ class TravelState(TypedDict, total=False):
     itinerary_plan: str
     summary: str
 
+    # Human-in-the-loop review
+    review_decision: dict[str, Any]  # {"action": "approve"|"request_changes", "feedback": str}
+    revision_feedback: str
+
     # Cross-cutting
     messages: Annotated[list[dict[str, Any]], operator.add]
     llm_calls: Annotated[list[dict[str, Any]], operator.add]

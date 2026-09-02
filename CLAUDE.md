@@ -6,9 +6,10 @@ before making changes.
 ## What this is
 
 Multi-agent trip planner. FastAPI + LangGraph backend (`apps/api`, Python/uv),
-React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–3**:
+React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–4**:
 `query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
-itinerary → final`, with the tool specialists in parallel fan-out. Full plan in
+itinerary → human_review → final`, with the tool specialists in parallel
+fan-out and a resumable human-in-the-loop approval step. Full plan in
 `clockwise-implementation-plan.md`; diagrams in `clockwise-architecture.html`.
 
 ## Non-negotiable rules
@@ -49,6 +50,12 @@ itinerary → final`, with the tool specialists in parallel fan-out. Full plan i
 - **Tool specialists** (flight/hotel/weather) call an in-process tool and don't
   use the LLM. **LLM specialists** (budget/itinerary/final) call the gateway;
   their node names are in the synthesis tier in `model_config.py`.
+- **HITL:** `human_review` calls `interrupt()` after itinerary. `/plan` detects
+  the pause via `"__interrupt__" in state` and returns `awaiting_review`;
+  `/plan/resume` continues with `Command(resume={"action": ...})`. Approve →
+  final; request_changes → loop back to itinerary with `revision_feedback`.
+  Resume is checkpoint-based (works across separate requests); never hold a
+  connection open across the pause.
 - Nodes get the gateway via `config["configurable"]["gateway"]` (see
   `graph/nodes/__init__.py::gateway_from`) — they never construct a client.
 - Node functions must be `async def node(state, config: RunnableConfig)` with an
