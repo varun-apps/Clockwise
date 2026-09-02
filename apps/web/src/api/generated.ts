@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plan/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_plan_resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -264,7 +281,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "completed" | "blocked";
+            status: "completed" | "blocked" | "awaiting_review";
             /** Blocked Reason */
             blocked_reason?: string | null;
             /** Reasoning */
@@ -284,6 +301,26 @@ export interface components {
             summary?: string | null;
             /** Llm Calls */
             llm_calls?: components["schemas"]["LLMCall"][];
+        };
+        /** ResumeRequest */
+        ResumeRequest: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             * @description The paused conversation to resume
+             */
+            conversation_id: string;
+            /**
+             * Action
+             * @description approve the itinerary or request changes
+             * @enum {string}
+             */
+            action: "approve" | "request_changes";
+            /**
+             * Feedback
+             * @description What to change (used when action is request_changes)
+             */
+            feedback?: string | null;
         };
         /** TripConstraints */
         TripConstraints: {
@@ -418,6 +455,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_plan_resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResumeRequest"];
             };
         };
         responses: {

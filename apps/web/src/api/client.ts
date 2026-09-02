@@ -6,6 +6,8 @@ import type { components, paths } from "./generated";
 export type PlanRequest = paths["/plan"]["post"]["requestBody"]["content"]["application/json"];
 export type PlanResponse =
   paths["/plan"]["post"]["responses"]["200"]["content"]["application/json"];
+export type ResumeRequest =
+  paths["/plan/resume"]["post"]["requestBody"]["content"]["application/json"];
 export type HealthResponse = components["schemas"]["HealthResponse"];
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
@@ -23,6 +25,15 @@ export async function getHealth(): Promise<HealthResponse> {
 
 export async function postPlan(body: PlanRequest): Promise<PlanResponse> {
   const res = await fetch(`${API_BASE}/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json<PlanResponse>(res);
+}
+
+export async function postResume(body: ResumeRequest): Promise<PlanResponse> {
+  const res = await fetch(`${API_BASE}/plan/resume`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

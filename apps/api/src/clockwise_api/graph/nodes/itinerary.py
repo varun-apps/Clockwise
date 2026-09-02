@@ -30,7 +30,11 @@ def _mock_plan(state: TravelState) -> str:
     days = int(constraints.get("duration_days") or 3)
 
     hotel = hotels[0] if hotels else None
+    feedback = state.get("revision_feedback")
     lines = [f"# {days}-Day Trip to {destination}", ""]
+    if feedback:
+        lines.append(f"_Revised per your feedback: {feedback}_")
+        lines.append("")
     if weather:
         lines.append(
             f"_Weather: {weather.get('summary', 'n/a')} "
@@ -59,7 +63,8 @@ async def itinerary_node(state: TravelState, config: RunnableConfig) -> dict[str
                 f"Constraints: {state.get('trip_constraints', {})}\n"
                 f"Weather: {state.get('weather_info', {})}\n"
                 f"Hotels: {state.get('hotel_results', [])}\n"
-                f"Budget: {state.get('budget_analysis', {})}"
+                f"Budget: {state.get('budget_analysis', {})}\n"
+                f"Revision feedback (apply if present): {state.get('revision_feedback', '')}"
             ),
             mock=_mock_plan(state),
         )

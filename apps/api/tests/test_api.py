@@ -1,4 +1,4 @@
-"""API-level tests: /health, /plan (completed + blocked), persistence."""
+"""API-level tests: /health, /plan (review + blocked), /plan/resume, persistence."""
 
 from __future__ import annotations
 
@@ -12,27 +12,72 @@ async def test_health(client) -> None:  # type: ignore[no-untyped-def]
     assert body["langfuse"] == "disabled"
 
 
-async def test_plan_completed_and_persisted(client) -> None:  # type: ignore[no-untyped-def]
+async def test_plan_pauses_for_review(client) -> None:  # type: ignore[no-untyped-def]
     resp = await client.post("/plan", json={"query": "Plan a 3 day trip to Tokyo"})
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "completed"
+    assert data["status"] == "awaiting_review"
     assert data["weather"]["destination"] == "Tokyo"
     assert data["itinerary_plan"]
-    assert data["summary"]
+    assert data["summary"] is None  # not written until approval
     assert "weather" in data["selected_agents"]
     # Fan-out specialists populated their slices.
     assert len(data["flights"]) >= 1
     assert len(data["hotels"]) >= 1
     assert data["budget"]["grand_total"] > 0
 
-    # Conversation + both messages persisted.
-    convo_id = data["conversation_id"]
+
+async def test_plan_resume_approve_completes(client) -> None:  # type: ignore[no-untyped-def]
+    started = (await client.post("/plan", json={"query": "Plan a 3 day trip to Tokyo"})).json()
+    convo_id = started["conversation_id"]
+    assert started["status"] == "awaiting_review"
+
+    resp = await client.post(
+        "/plan/resume", json={"conversation_id": convo_id, "action": "approve"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "completed"
+    assert data["summary"]
+
+    # user + draft + summary all persisted.
     detail = await client.get(f"/conversations/{convo_id}")
-    assert detail.status_code == 200
     messages = detail.json()["messages"]
-    assert len(messages) >= 2
+    assert len(messages) >= 3
     assert messages[0]["role"] == "user"
+
+
+async def test_plan_resume_request_changes_then_approve(client) -> None:  # type: ignore[no-untyped-def]
+    started = (await client.post("/plan", json={"query": "Plan a 4 day trip to Dubai"})).json()
+    convo_id = started["conversation_id"]
+
+    revised = await client.post(
+        "/plan/resume",
+        json={
+            "conversation_id": convo_id,
+            "action": "request_changes",
+            "feedback": "cheaper hotel",
+        },
+    )
+    rdata = revised.json()
+    assert rdata["status"] == "awaiting_review"
+    assert "cheaper hotel" in rdata["itinerary_plan"]
+
+    done = await client.post(
+        "/plan/resume", json={"conversation_id": convo_id, "action": "approve"}
+    )
+    assert done.json()["status"] == "completed"
+
+
+async def test_resume_without_pause_conflicts(client) -> None:  # type: ignore[no-untyped-def]
+    started = (await client.post("/plan", json={"query": "Plan a 3 day trip to Tokyo"})).json()
+    convo_id = started["conversation_id"]
+    await client.post("/plan/resume", json={"conversation_id": convo_id, "action": "approve"})
+    # Second resume: already completed, not awaiting review.
+    resp = await client.post(
+        "/plan/resume", json={"conversation_id": convo_id, "action": "approve"}
+    )
+    assert resp.status_code == 409
 
 
 async def test_plan_blocked(client) -> None:  # type: ignore[no-untyped-def]
