@@ -153,7 +153,6 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 apps/api/.venv/
-docs/*
 
 # Generated contract-sync artifacts
 # openapi.json is transient; the generated TS client IS committed so the web app

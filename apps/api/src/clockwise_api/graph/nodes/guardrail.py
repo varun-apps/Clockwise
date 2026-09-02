@@ -114,6 +114,6 @@ async def guardrail_node(state: TravelState, config: RunnableConfig) -> dict[str
 
 
 def route_after_guardrail(state: TravelState) -> str:
-    """Conditional edge: PASS -> supervisor, BLOCK -> END."""
+    """Conditional edge: PASS -> load_memory (then plan), BLOCK -> END."""
     decision = state.get("guardrail", {}).get("decision", "BLOCK")
-    return "supervisor" if decision == "PASS" else "__end__"
+    return "load_memory" if decision == "PASS" else "__end__"

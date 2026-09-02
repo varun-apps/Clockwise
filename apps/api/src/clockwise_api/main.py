@@ -20,12 +20,14 @@ from .db import get_engine
 from .graph.build import build_graph
 from .llm.gateway import LLMGateway
 from .logging import configure_logging, get_logger
+from .memory import MemoryService
 from .models import Base
 from .observability import flush, init_observability
 from .routers import conversations, health, plan
 
 if TYPE_CHECKING:
     from langgraph.checkpoint.base import BaseCheckpointSaver
+    from langgraph.store.base import BaseStore
 
 log = get_logger(__name__)
 
@@ -44,24 +46,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    # Checkpointer: Postgres when configured, else in-memory (still resumable
-    # within the process — no hard Postgres dependency for local/mock runs).
+    # Checkpointer (HITL resume) + store (long-term memory): Postgres when
+    # configured, else in-memory — no hard Postgres dependency for local/mock.
     checkpointer: BaseCheckpointSaver[Any]
+    store: BaseStore
     if settings.db_url_async.startswith("postgresql"):
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from langgraph.store.postgres.aio import AsyncPostgresStore
 
         conn_str = settings.database_url.replace("postgresql+psycopg://", "postgresql://", 1)
         pg = await stack.enter_async_context(AsyncPostgresSaver.from_conn_string(conn_str))
         await pg.setup()
         checkpointer = pg
+        pg_store = await stack.enter_async_context(AsyncPostgresStore.from_conn_string(conn_str))
+        await pg_store.setup()
+        store = pg_store
     else:
         from langgraph.checkpoint.memory import InMemorySaver
+        from langgraph.store.memory import InMemoryStore
 
         checkpointer = InMemorySaver()
+        store = InMemoryStore()
 
     app.state.settings = settings
     app.state.gateway = LLMGateway(settings)
-    app.state.graph = build_graph(checkpointer)
+    app.state.memory = MemoryService(store)
+    app.state.graph = build_graph(checkpointer, store)
     log.info("startup.ready", llm="live" if settings.llm_enabled else "mock")
 
     try:

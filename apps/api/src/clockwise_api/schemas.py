@@ -85,6 +85,9 @@ class PlanRequest(BaseModel):
     conversation_id: uuid.UUID | None = Field(
         default=None, description="Continue an existing conversation, or omit to start one"
     )
+    user_id: str = Field(
+        default="anonymous", description="Stable id used to load/save long-term preferences"
+    )
 
 
 class ResumeRequest(BaseModel):
@@ -109,6 +112,7 @@ class PlanResponse(BaseModel):
     budget: BudgetAnalysis | None = None
     itinerary_plan: str | None = None
     summary: str | None = None
+    memory_used: list[str] = Field(default_factory=list)
     llm_calls: list[LLMCall] = Field(default_factory=list)
 
 

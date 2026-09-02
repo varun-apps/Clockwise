@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClockWise — Architecture Schematics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1f6;
+    --surface:#ffffff;
+    --panel-grid:rgba(26,34,48,.045);
+    --ink:#1a2230;
+    --muted:#5b6472;
+    --faint:#8b93a1;
+    --line:#d3dae3;
+    --line-strong:#b7c0cd;
+
+    /* layer color code — consistent across every diagram */
+    --c-guard:#e5484d;
+    --c-pass:#2f9e63;
+    --c-super:#6e56cf;
+    --c-spec:#3e63dd;
+    --c-state:#5b6472;
+    --c-human:#d9730d;
+    --c-mem:#0e8b8b;
+    --c-llm:#b4468e;
+    --c-tool:#0f7ea3;
+
+    --radius:12px;
+    --maxw:1120px;
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+  a{color:var(--c-super);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--c-super);outline-offset:2px;border-radius:4px}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  /* ---------- header ---------- */
+  header.masthead{
+    border-bottom:1px solid var(--line);
+    background:
+      linear-gradient(var(--panel-grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--panel-grid) 1px,transparent 1px),
+      var(--surface);
+    background-size:26px 26px,26px 26px,auto;
+  }
+  .masthead .wrap{padding-top:46px;padding-bottom:34px}
+  .kicker{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:12.5px;letter-spacing:.02em;color:var(--muted);
+    display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--c-super);box-shadow:0 0 0 4px rgba(110,86,207,.15)}
+  h1{
+    font-family:"Space Grotesk",sans-serif;
+    font-weight:700;font-size:clamp(30px,5vw,50px);
+    line-height:1.02;letter-spacing:-.02em;margin:0 0 14px;
+  }
+  .lede{font-size:16.5px;color:var(--muted);max-width:60ch;margin:0}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .legend{
+    margin-top:30px;display:flex;flex-wrap:wrap;gap:8px 22px;
+    padding-top:22px;border-top:1px solid var(--line);
+  }
+  .legend .k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .legend .swatch{width:13px;height:13px;border-radius:3px;flex:none}
+
+  /* ---------- toc ---------- */
+  nav.toc{position:sticky;top:0;z-index:20;background:rgba(238,241,246,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  nav.toc .wrap{display:flex;flex-wrap:wrap;gap:4px 6px;padding-top:11px;padding-bottom:11px}
+  nav.toc a{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    padding:5px 10px;border-radius:20px;border:1px solid transparent;white-space:nowrap;
+  }
+  nav.toc a:hover{color:var(--ink);border-color:var(--line-strong);text-decoration:none;background:var(--surface)}
+
+  /* ---------- sections ---------- */
+  section{padding:52px 0 8px}
+  .sec-head{display:flex;gap:16px;align-items:baseline;margin-bottom:6px}
+  .sec-num{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--c-super);padding-top:6px}
+  h2{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(21px,3vw,27px);letter-spacing:-.01em;margin:0}
+  .sec-intro{color:var(--muted);max-width:74ch;margin:8px 0 24px}
+  .sec-intro code{font-size:.86em;background:rgba(110,86,207,.08);padding:1px 5px;border-radius:5px;color:#4b3ba8}
+
+  /* ---------- schematic panel ---------- */
+  .panel{
+    position:relative;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:34px 30px;
+    background-image:
+      linear-gradient(var(--panel-grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--panel-grid) 1px,transparent 1px);
+    background-size:26px 26px;
+    overflow:hidden;
+  }
+  .flow{position:relative;display:flex;flex-direction:column;align-items:stretch;max-width:640px;margin:0 auto}
+
+  /* ---------- node ---------- */
+  .node{
+    --accent:var(--c-state);
+    position:relative;display:flex;background:var(--surface);
+    border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:9px;padding:13px 16px;
+    box-shadow:0 1px 0 rgba(26,34,48,.04);
+  }
+  .node__body{flex:1;min-width:0}
+  .node__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .node__title{font-weight:600;font-size:15px;letter-spacing:-.01em}
+  .node__meta{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);white-space:nowrap}
+  .node__desc{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .node__io{margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--accent)}
+  .node.tiny{padding:10px 14px}
+  .node.tiny .node__title{font-size:13.5px}
+  .node.ghost{background:repeating-linear-gradient(45deg,var(--surface),var(--surface) 8px,#fbfcfe 8px,#fbfcfe 16px);border-style:dashed}
+
+  .n-guard{--accent:var(--c-guard)}
+  .n-pass{--accent:var(--c-pass)}
+  .n-super{--accent:var(--c-super)}
+  .n-spec{--accent:var(--c-spec)}
+  .n-state{--accent:var(--c-state)}
+  .n-human{--accent:var(--c-human)}
+  .n-mem{--accent:var(--c-mem)}
+  .n-llm{--accent:var(--c-llm)}
+  .n-tool{--accent:var(--c-tool)}
+
+  .node__ic{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:12px;color:#fff;background:var(--accent);border-radius:6px;width:26px;height:22px;display:flex;align-items:center;justify-content:center;margin-right:12px;flex:none;margin-top:1px}
+
+  /* ---------- connectors ---------- */
+  .conn{width:2px;height:30px;background:var(--line-strong);margin:0 auto;position:relative;flex:none}
+  .conn::after{content:"";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--line-strong)}
+  .conn.flow{background:linear-gradient(var(--line-strong) 0 0) no-repeat;background-size:2px 100%}
+  .conn.animated{
+    background-image:repeating-linear-gradient(var(--c-super) 0 6px,transparent 6px 12px);
+    background-size:2px 24px;background-repeat:repeat-y;
+    animation:march 900ms linear infinite;
+  }
+  @keyframes march{to{background-position:0 24px}}
+  .conn .tag{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);
+    padding:2px 9px;white-space:nowrap;
+  }
+  .conn .tag.ok{color:var(--c-pass);border-color:rgba(47,158,99,.4)}
+
+  /* parallel row */
+  .row{display:flex;gap:12px}
+  .row>*{flex:1;min-width:0}
+  .fan{position:relative}
+  .fan-label{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);margin:2px 0 10px}
+
+  /* gate / branch */
+  .gate{display:flex;align-items:stretch;gap:0}
+  .gate .stem{flex:1}
+  .branch-out{
+    display:flex;align-items:center;gap:10px;align-self:center;padding-left:16px;position:relative;
+  }
+  .branch-out::before{content:"";width:26px;height:2px;background:var(--line-strong);position:relative}
+  .branch-out .tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--c-guard);position:absolute;top:-16px;left:22px;white-space:nowrap}
+
+  .loopback{
+    display:flex;align-items:center;gap:10px;justify-content:center;margin-top:10px;
+    font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--c-human);
+    border:1px dashed rgba(217,115,13,.5);border-radius:8px;padding:8px 14px;background:rgba(217,115,13,.05);
+  }
+
+  /* ---------- topology grid ---------- */
+  .topo{display:grid;grid-template-columns:1fr 260px;gap:22px;align-items:start}
+  .zone{border:1.5px dashed var(--line-strong);border-radius:12px;padding:16px 16px 18px;position:relative}
+  .zone__tag{position:absolute;top:-10px;left:14px;background:var(--surface);padding:0 8px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+  .zone.vps{border-color:rgba(110,86,207,.45)}
+  .zone.vps .zone__tag{color:var(--c-super)}
+  .zone.ext .zone__tag{color:var(--faint)}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .sidelink{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);text-align:center;padding:4px 0}
+
+  /* ---------- swimlane (HITL) ---------- */
+  .lane-head{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:8px}
+  .lane-head div{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);text-align:center;padding:6px;border-bottom:2px solid var(--line-strong)}
+  .steps{position:relative;display:flex;flex-direction:column;gap:12px}
+  .step{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}
+  .bubble{border:1px solid var(--line);border-left:4px solid var(--accent);--accent:var(--c-state);border-radius:9px;padding:11px 14px;background:var(--surface);font-size:13.5px}
+  .bubble .n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);display:block;margin-bottom:2px}
+  .bubble.client{--accent:var(--c-spec)}
+  .bubble.server{--accent:var(--c-super)}
+  .bubble.store{--accent:var(--c-mem)}
+  .arrowline{grid-column:1/-1;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint)}
+  .gap{grid-column:1/-1;display:flex;align-items:center;gap:12px;color:var(--c-human);font-family:"IBM Plex Mono",monospace;font-size:11.5px;margin:2px 0}
+  .gap::before,.gap::after{content:"";height:1px;flex:1;background:repeating-linear-gradient(90deg,var(--c-human) 0 5px,transparent 5px 10px);opacity:.6}
+
+  /* ---------- gateway ---------- */
+  .gw{display:flex;flex-direction:column;align-items:center;gap:0;max-width:560px;margin:0 auto}
+  .gw .fanin{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:11.5px;border:1px solid var(--line);border-radius:20px;padding:4px 11px;color:var(--muted);background:var(--surface)}
+  .chip.super{border-color:rgba(110,86,207,.35);color:var(--c-super)}
+  .chip.spec{border-color:rgba(62,99,221,.35);color:var(--c-spec)}
+  .chip.guard{border-color:rgba(229,72,77,.35);color:var(--c-guard)}
+  .reserve{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+
+  /* ---------- eval ---------- */
+  .eval-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:14px 0}
+  .ecard{border:1px solid var(--line);border-top:3px solid var(--accent);--accent:var(--c-spec);border-radius:9px;padding:13px 15px;background:var(--surface)}
+  .ecard h4{margin:0 0 4px;font-size:14px;font-family:"Space Grotesk",sans-serif;font-weight:600}
+  .ecard p{margin:0;font-size:12.5px;color:var(--muted)}
+  .ecard .metric{margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--accent)}
+  .e1{--accent:var(--c-guard)}.e2{--accent:var(--c-super)}.e3{--accent:var(--c-spec)}.e4{--accent:var(--c-human)}
+
+  /* ---------- state table ---------- */
+  .statewrap{overflow-x:auto}
+  table.state{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+  table.state th,table.state td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  table.state thead th{background:#f6f8fb;font-weight:600;font-size:12px}
+  table.state td.field{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink);white-space:nowrap}
+  .rw{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+  .w{color:var(--c-guard);font-weight:600}
+  .r{color:var(--c-pass);font-weight:600}
+
+  /* ---------- contract sync ---------- */
+  .hflow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center}
+  .hconn{align-self:center;display:flex;flex-direction:column;align-items:center;color:var(--faint);padding:0 6px;flex:none}
+  .hconn .ar{font-family:"IBM Plex Mono",monospace;font-size:18px;line-height:1;color:var(--line-strong)}
+  .hconn .l{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--faint);margin-top:2px}
+
+  .note{margin-top:18px;font-size:13px;color:var(--muted);border-left:2px solid var(--c-super);padding:4px 0 4px 14px}
+  .note b{color:var(--ink);font-weight:600}
+
+  footer{margin-top:56px;border-top:1px solid var(--line);background:var(--surface)}
+  footer .wrap{padding:26px 24px;color:var(--faint);font-size:12.5px;font-family:"IBM Plex Mono",monospace;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  @media (max-width:720px){
+    .topo{grid-template-columns:1fr}
+    .eval-grid{grid-template-columns:1fr}
+    .flow{max-width:100%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .conn.animated{animation:none;background-image:repeating-linear-gradient(var(--c-super) 0 6px,transparent 6px 12px)}
+  }
+  @media print{
+    nav.toc{display:none}
+    body{background:#fff}
+    .panel{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="kicker"><span class="dot"></span> CLOCKWISE · SYSTEM SCHEMATICS · v0 ARCHITECTURE</div>
+    <h1>Multi-agent trip planning,<br>drawn end to end.</h1>
+    <p class="lede">A supervisor routes a request across specialist agents over a shared state object, pauses for human review, then answers — all resumable and traced. <strong>FastAPI · LangGraph · LangMem · DeepSeek V4 Flash · React + TanStack.</strong> The color code below reads the same in every diagram.</p>
+    <div class="legend">
+      <div class="k"><span class="swatch" style="background:var(--c-guard)"></span>Guardrail</div>
+      <div class="k"><span class="swatch" style="background:var(--c-super)"></span>Supervisor</div>
+      <div class="k"><span class="swatch" style="background:var(--c-spec)"></span>Specialist agent</div>
+      <div class="k"><span class="swatch" style="background:var(--c-state)"></span>Shared state</div>
+      <div class="k"><span class="swatch" style="background:var(--c-human)"></span>Human review</div>
+      <div class="k"><span class="swatch" style="background:var(--c-mem)"></span>Memory / persistence</div>
+      <div class="k"><span class="swatch" style="background:var(--c-llm)"></span>LLM (external)</div>
+      <div class="k"><span class="swatch" style="background:var(--c-tool)"></span>Tools (external)</div>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <a href="#topology">01 · System topology</a>
+    <a href="#flow">02 · Request flow</a>
+    <a href="#graph">03 · Orchestration graph</a>
+    <a href="#hitl">04 · Human-in-the-loop</a>
+    <a href="#gateway">05 · Model gateway</a>
+    <a href="#eval">06 · Evaluation harness</a>
+    <a href="#state">07 · TravelState</a>
+    <a href="#contract">08 · Contract sync</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- 01 TOPOLOGY -->
+  <section id="topology">
+    <div class="sec-head"><span class="sec-num">01</span><h2>System topology</h2></div>
+    <p class="sec-intro">The deployed runtime. Everything inside the dashed boundary runs on the Hostinger VPS; the LLM and the trip data APIs stay external. The browser never talks to anything but the API.</p>
+    <div class="panel">
+      <div class="topo">
+        <div class="stack">
+          <div class="zone vps">
+            <span class="zone__tag">HOSTINGER VPS</span>
+            <div class="stack">
+              <div class="node n-spec"><div class="node__ic">UI</div><div class="node__body">
+                <div class="node__head"><span class="node__title">Caddy / nginx</span><span class="node__meta">TLS · static</span></div>
+                <div class="node__desc">Terminates HTTPS, serves the built React bundle, reverse-proxies the API.</div>
+              </div></div>
+              <div class="conn"></div>
+              <div class="node n-super"><div class="node__ic">API</div><div class="node__body">
+                <div class="node__head"><span class="node__title">FastAPI + worker</span><span class="node__meta">async · SSE/WS</span></div>
+                <div class="node__desc">HTTP + streaming edge. Owns sessions; hands orchestration to the graph.</div>
+              </div></div>
+              <div class="conn"></div>
+              <div class="node n-super"><div class="node__ic">LG</div><div class="node__body">
+                <div class="node__head"><span class="node__title">LangGraph engine</span><span class="node__meta">state machine</span></div>
+                <div class="node__desc">Supervisor + specialists over <code>TravelState</code>, with a Postgres checkpointer.</div>
+              </div></div>
+              <div class="conn"></div>
+              <div class="node n-mem"><div class="node__ic">PG</div><div class="node__body">
+                <div class="node__head"><span class="node__title">PostgreSQL</span><span class="node__meta">durable</span></div>
+                <div class="node__desc">Conversations · graph checkpoints · LangMem store.</div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="zone ext">
+            <span class="zone__tag">EXTERNAL</span>
+            <div class="stack">
+              <div class="node n-llm tiny"><div class="node__ic">◇</div><div class="node__body">
+                <div class="node__head"><span class="node__title">Model gateway</span></div>
+                <div class="node__desc">OpenAI-compatible → DeepSeek V4 Flash.</div>
+              </div></div>
+              <div class="sidelink">↑ inference calls</div>
+              <div class="node n-tool tiny"><div class="node__ic">⛭</div><div class="node__body">
+                <div class="node__head"><span class="node__title">Tool APIs</span></div>
+                <div class="node__desc">AviationStack · Tavily · Weather (MCP or in-process).</div>
+              </div></div>
+              <div class="sidelink">↑ tool calls</div>
+            </div>
+          </div>
+          <div class="zone ext" style="margin-top:14px">
+            <span class="zone__tag">OBSERVABILITY</span>
+            <div class="node n-mem tiny"><div class="node__ic">⌗</div><div class="node__body">
+              <div class="node__head"><span class="node__title">Langfuse</span></div>
+              <div class="node__desc">Receives traces from every LLM &amp; agent step.</div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>Why the LLM sits outside:</b> a VPS can't serve DeepSeek at usable speed without a GPU, so inference is a swappable external dependency — never co-located with the app tier.</div>
+    </div>
+  </section>
+
+  <!-- 02 REQUEST FLOW -->
+  <section id="flow">
+    <div class="sec-head"><span class="sec-num">02</span><h2>End-to-end request flow</h2></div>
+    <p class="sec-intro">The happy path of a single request, from raw input to a stored plan. Each stage writes its output into the shared state before the next stage reads it.</p>
+    <div class="panel">
+      <div class="flow">
+        <div class="node n-spec"><div class="node__ic">1</div><div class="node__body">
+          <div class="node__head"><span class="node__title">User input</span><span class="node__meta">React · TanStack</span></div>
+          <div class="node__desc">“Plan a 4 day trip to Dubai for next month.”</div>
+        </div></div>
+        <div class="conn animated"><span class="tag">query</span></div>
+
+        <div class="gate">
+          <div class="stem">
+            <div class="node n-guard"><div class="node__ic">2</div><div class="node__body">
+              <div class="node__head"><span class="node__title">Input guardrail</span><span class="node__meta">classify</span></div>
+              <div class="node__desc">Relevance · safety · policy · validity · injection.</div>
+            </div></div>
+          </div>
+          <div class="branch-out">
+            <span class="tag">BLOCK</span>
+            <div class="node n-guard tiny" style="min-width:150px"><div class="node__body">
+              <div class="node__head"><span class="node__title">Blocked</span></div>
+              <div class="node__desc">Return reason, stop.</div>
+            </div></div>
+          </div>
+        </div>
+        <div class="conn animated"><span class="tag ok">PASS</span></div>
+
+        <div class="node n-super"><div class="node__ic">3</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Supervisor agent</span><span class="node__meta">route</span></div>
+          <div class="node__desc">Understands the request; selects agents dynamically — no hand-wired workflow.</div>
+          <div class="node__io">→ selected_agents · trip_constraints · reasoning</div>
+        </div></div>
+        <div class="conn animated"></div>
+
+        <div class="fan">
+          <div class="fan-label">— fan out to selected specialists —</div>
+          <div class="row">
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">Flight</span></div><div class="node__io">tool</div></div></div>
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">Hotel</span></div><div class="node__io">tool</div></div></div>
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">Weather</span></div><div class="node__io">tool</div></div></div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="row">
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">Budget</span></div><div class="node__io">llm</div></div></div>
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">Itinerary</span></div><div class="node__io">llm</div></div></div>
+          </div>
+        </div>
+        <div class="conn"></div>
+
+        <div class="node n-state"><div class="node__ic">4</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Shared state · TravelState</span><span class="node__meta">the bus</span></div>
+          <div class="node__desc">Every agent reads and writes here — the only channel between nodes.</div>
+        </div></div>
+        <div class="conn"></div>
+
+        <div class="node n-human"><div class="node__ic">5</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Human-in-the-loop</span><span class="node__meta">interrupt</span></div>
+          <div class="node__desc">Review the itinerary — approve, or request changes.</div>
+        </div></div>
+        <div class="loopback">↻ request changes → re-invoke only the affected agents</div>
+        <div class="conn"><span class="tag ok">approve</span></div>
+
+        <div class="node n-super"><div class="node__ic">6</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Final response agent</span><span class="node__meta">synthesize</span></div>
+          <div class="node__desc">Assembles the approved plan into a structured, readable answer.</div>
+        </div></div>
+        <div class="conn"></div>
+
+        <div class="node n-mem"><div class="node__ic">7</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Persistence &amp; long-term memory</span><span class="node__meta">Postgres · LangMem</span></div>
+          <div class="node__desc">Conversation + final state saved; durable preferences written back for next time.</div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 GRAPH -->
+  <section id="graph">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Orchestration graph</h2></div>
+    <p class="sec-intro">The same flow as the LangGraph state machine actually wires it: nodes, conditional edges, and the checkpoint that persists after every step. This is what makes the pause in §04 possible.</p>
+    <div class="panel">
+      <div class="flow">
+        <div class="node n-state tiny"><div class="node__body"><div class="node__head"><span class="node__title">START</span><span class="node__meta">entrypoint</span></div></div></div>
+        <div class="conn"></div>
+        <div class="gate">
+          <div class="stem">
+            <div class="node n-guard"><div class="node__ic">▣</div><div class="node__body">
+              <div class="node__head"><span class="node__title">guardrail_node</span><span class="node__meta">conditional edge</span></div>
+              <div class="node__desc">Routes PASS → supervisor, BLOCK → END.</div>
+            </div></div>
+          </div>
+          <div class="branch-out"><span class="tag">block → END</span>
+            <div class="node n-guard tiny" style="min-width:120px"><div class="node__body"><div class="node__head"><span class="node__title">END</span></div><div class="node__desc">reason returned</div></div></div>
+          </div>
+        </div>
+        <div class="conn"><span class="tag ok">pass</span></div>
+        <div class="node n-super"><div class="node__ic">◆</div><div class="node__body">
+          <div class="node__head"><span class="node__title">supervisor_node</span><span class="node__meta">router</span></div>
+          <div class="node__desc">Emits the agent set; a conditional edge maps it to the specialist nodes to run.</div>
+        </div></div>
+        <div class="conn"><span class="tag">selected_agents</span></div>
+        <div class="fan">
+          <div class="fan-label">— conditional fan-out (parallel) → merge into state —</div>
+          <div class="row">
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">flight_node</span></div></div></div>
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">hotel_node</span></div></div></div>
+            <div class="node n-spec tiny"><div class="node__body"><div class="node__head"><span class="node__title">weather_node</span></div></div></div>
+          </div>
+        </div>
+        <div class="conn"></div>
+        <div class="node n-spec"><div class="node__ic">$</div><div class="node__body">
+          <div class="node__head"><span class="node__title">budget_node → itinerary_node</span><span class="node__meta">synthesis</span></div>
+          <div class="node__desc">Run after tool results land; produce the reviewable day-wise plan.</div>
+        </div></div>
+        <div class="conn"></div>
+        <div class="node n-human"><div class="node__ic">⏸</div><div class="node__body">
+          <div class="node__head"><span class="node__title">interrupt()</span><span class="node__meta">HITL pause</span></div>
+          <div class="node__desc">Graph halts and checkpoints. Resumes on the client's decision.</div>
+        </div></div>
+        <div class="loopback">↻ changes → conditional edge back to the affected specialist nodes</div>
+        <div class="conn"><span class="tag ok">approve</span></div>
+        <div class="node n-super"><div class="node__ic">✦</div><div class="node__body">
+          <div class="node__head"><span class="node__title">final_response_node</span></div>
+        </div></div>
+        <div class="conn"></div>
+        <div class="node n-state tiny"><div class="node__body"><div class="node__head"><span class="node__title">END</span></div></div></div>
+      </div>
+      <div class="note"><b>Checkpointer, everywhere:</b> after each node the full state is written to Postgres. That is the single mechanism behind resumable HITL, retries, and time-travel debugging.</div>
+    </div>
+  </section>
+
+  <!-- 04 HITL -->
+  <section id="hitl">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Human-in-the-loop &amp; durable execution</h2></div>
+    <p class="sec-intro">The non-obvious part. The review pause can last minutes, so the request can't be held open. The graph runs to the interrupt, checkpoints, and returns — a later call resumes from that exact point.</p>
+    <div class="panel">
+      <div class="lane-head"><div>CLIENT (React)</div><div>SERVER (FastAPI + graph)</div></div>
+      <div class="steps">
+        <div class="step">
+          <div class="bubble client"><span class="n">1 · request</span><code>POST /plan</code> with the query</div>
+          <div></div>
+        </div>
+        <div class="arrowline">→</div>
+        <div class="step">
+          <div></div>
+          <div class="bubble server"><span class="n">2 · run</span>Guardrail → supervisor → specialists → itinerary, until <code>interrupt()</code></div>
+        </div>
+        <div class="step">
+          <div></div>
+          <div class="bubble store"><span class="n">3 · checkpoint</span>Full <code>TravelState</code> written to Postgres, keyed by <code>thread_id</code></div>
+        </div>
+        <div class="arrowline">←</div>
+        <div class="step">
+          <div class="bubble client"><span class="n">4 · awaiting review</span>Receives the draft itinerary + <code>thread_id</code>; renders Approve / Request changes</div>
+          <div></div>
+        </div>
+        <div class="gap">connection closed · no worker held · resume any time</div>
+        <div class="arrowline">→</div>
+        <div class="step">
+          <div class="bubble client"><span class="n">5 · decision</span><code>POST /resume</code> · {approve | changes + edits}</div>
+          <div></div>
+        </div>
+        <div class="step">
+          <div></div>
+          <div class="bubble server"><span class="n">6 · resume</span>Rehydrate from checkpoint; continue from the interrupt — approve → final, changes → loop back</div>
+        </div>
+        <div class="arrowline">←</div>
+        <div class="step">
+          <div class="bubble client"><span class="n">7 · plan</span>Final response streamed in</div>
+          <div></div>
+        </div>
+      </div>
+      <div class="note"><b>Open decision:</b> whether steps 2 &amp; 6 run inline or on a background worker, and how progress streams meanwhile. The checkpoint makes either safe — this is the execution-model pass still to be designed.</div>
+    </div>
+  </section>
+
+  <!-- 05 GATEWAY -->
+  <section id="gateway">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Model gateway &amp; tiering</h2></div>
+    <p class="sec-intro">Every node reaches the LLM through one config module, so the model is a one-line change. Today: Flash on all nodes. The stronger tier is wired but idle until the eval proves it's needed.</p>
+    <div class="panel">
+      <div class="gw">
+        <div class="fanin">
+          <span class="chip guard">guardrail</span>
+          <span class="chip super">supervisor</span>
+          <span class="chip spec">flight</span>
+          <span class="chip spec">hotel</span>
+          <span class="chip spec">weather</span>
+          <span class="chip spec">budget</span>
+          <span class="chip spec">itinerary</span>
+          <span class="chip super">final</span>
+        </div>
+        <div class="conn"><span class="tag">every node</span></div>
+        <div class="node n-state" style="width:100%"><div class="node__ic">≡</div><div class="node__body">
+          <div class="node__head"><span class="node__title">model_config</span><span class="node__meta">single source of truth</span></div>
+          <div class="node__desc">Maps each node → a model id. Swap or tier here, nowhere else.</div>
+        </div></div>
+        <div class="conn"></div>
+        <div class="node n-llm" style="width:100%"><div class="node__ic">◇</div><div class="node__body">
+          <div class="node__head"><span class="node__title">OpenAI-compatible gateway</span><span class="node__meta">OpenRouter</span></div>
+        </div></div>
+        <div class="conn"></div>
+        <div class="node n-llm" style="width:100%"><div class="node__ic">★</div><div class="node__body">
+          <div class="node__head"><span class="node__title">DeepSeek V4 Flash</span><span class="node__meta">active · all nodes</span></div>
+          <div class="node__desc">Cheap, ~1M context, built for agent workflows.</div>
+        </div></div>
+        <div class="reserve">
+          <div class="node n-llm ghost tiny"><div class="node__body"><div class="node__head"><span class="node__title">DeepSeek V4 Pro</span><span class="node__meta">reserve · synthesis</span></div></div></div>
+          <div class="node n-llm ghost tiny"><div class="node__body"><div class="node__head"><span class="node__title">GLM-5.x</span><span class="node__meta">reserve · synthesis</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 EVAL -->
+  <section id="eval">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Evaluation harness</h2></div>
+    <p class="sec-intro">Four sub-evals, scored by different methods, over one curated golden set. This is what answers “does Flash-everywhere hold, or does synthesis need the stronger tier?”</p>
+    <div class="panel">
+      <div class="flow" style="max-width:720px">
+        <div class="row">
+          <div class="node n-mem tiny"><div class="node__body"><div class="node__head"><span class="node__title">Golden set</span><span class="node__meta">~30–50 · edge-weighted</span></div><div class="node__desc">Langfuse dataset.</div></div></div>
+          <div class="node n-tool tiny"><div class="node__body"><div class="node__head"><span class="node__title">Mock tool fixtures</span></div><div class="node__desc">Frozen — deterministic, no live APIs.</div></div></div>
+        </div>
+        <div class="conn"></div>
+      </div>
+      <div class="eval-grid">
+        <div class="ecard e1"><h4>Guardrail</h4><p>Classification vs expected PASS/BLOCK + reason.</p><div class="metric">precision / recall per reason</div></div>
+        <div class="ecard e2"><h4>Supervisor routing</h4><p>Right agent set + extracted constraints, valid JSON.</p><div class="metric">agent-set F1 · field accuracy · schema-valid</div></div>
+        <div class="ecard e3"><h4>Specialist tool-calling</h4><p>Right tool, valid args, correct values.</p><div class="metric">BFCL-style AST match</div></div>
+        <div class="ecard e4"><h4>Synthesis quality</h4><p>Sanity checks + rubric judged by a stronger model.</p><div class="metric">LLM-as-judge · 1–5 rubric</div></div>
+      </div>
+      <div class="flow" style="max-width:720px">
+        <div class="conn"></div>
+        <div class="node n-super"><div class="node__ic">⇄</div><div class="node__body">
+          <div class="node__head"><span class="node__title">Langfuse experiment</span><span class="node__meta">A/B</span></div>
+          <div class="node__desc">Flash-everywhere &nbsp;vs&nbsp; Flash-tools + Pro-synthesis — same set, compared on rubric score &amp; cost-per-plan.</div>
+        </div></div>
+        <div class="conn"><span class="tag">decides</span></div>
+        <div class="node n-human tiny"><div class="node__body"><div class="node__head"><span class="node__title">Tiering decision</span></div></div></div>
+      </div>
+      <div class="note"><b>Bias guard:</b> the judge model must be stronger and different from the model under test — Flash grading Flash gives self-preference.</div>
+    </div>
+  </section>
+
+  <!-- 07 STATE -->
+  <section id="state">
+    <div class="sec-head"><span class="sec-num">07</span><h2>TravelState — read / write map</h2></div>
+    <p class="sec-intro">The shared object is the whole contract between agents. Who writes each field determines the fan-out order; who reads it determines the dependencies.</p>
+    <div class="panel">
+      <div class="statewrap">
+        <table class="state">
+          <thead><tr><th>Field</th><th>Written by</th><th>Read by</th></tr></thead>
+          <tbody>
+            <tr><td class="field">user_query</td><td class="rw">entry</td><td class="rw">guardrail, supervisor</td></tr>
+            <tr><td class="field">trip_constraints</td><td class="rw">supervisor</td><td class="rw">all specialists</td></tr>
+            <tr><td class="field">flight_results</td><td class="rw">flight</td><td class="rw">budget, itinerary</td></tr>
+            <tr><td class="field">hotel_results</td><td class="rw">hotel</td><td class="rw">budget, itinerary</td></tr>
+            <tr><td class="field">weather_info</td><td class="rw">weather</td><td class="rw">itinerary</td></tr>
+            <tr><td class="field">budget_analysis</td><td class="rw">budget</td><td class="rw">itinerary, final</td></tr>
+            <tr><td class="field">itinerary_plan</td><td class="rw">itinerary</td><td class="rw">HITL, final</td></tr>
+            <tr><td class="field">messages</td><td class="rw">all nodes</td><td class="rw">all nodes</td></tr>
+            <tr><td class="field">llm_calls</td><td class="rw">all nodes</td><td class="rw">observability</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Reading order falls out of this table:</b> <span class="mono">itinerary</span> depends on nearly everything, so it can't run until the tool nodes and budget have written — which is exactly why it sits last before review.</div>
+    </div>
+  </section>
+
+  <!-- 08 CONTRACT -->
+  <section id="contract">
+    <div class="sec-head"><span class="sec-num">08</span><h2>Monorepo contract sync</h2></div>
+    <p class="sec-intro">The one piece of monorepo plumbing that pays for itself: the backend's own schema generates the frontend's types, so the two halves can't silently drift.</p>
+    <div class="panel">
+      <div class="hflow">
+        <div class="node n-super tiny" style="max-width:160px"><div class="node__body"><div class="node__head"><span class="node__title">FastAPI</span></div><div class="node__desc">Pydantic models</div></div></div>
+        <div class="hconn"><span class="ar">→</span><span class="l">emits</span></div>
+        <div class="node n-state tiny" style="max-width:160px"><div class="node__body"><div class="node__head"><span class="node__title">OpenAPI spec</span></div><div class="node__desc">generated</div></div></div>
+        <div class="hconn"><span class="ar">→</span><span class="l">codegen</span></div>
+        <div class="node n-spec tiny" style="max-width:170px"><div class="node__body"><div class="node__head"><span class="node__title">Typed TS client</span></div><div class="node__desc">openapi-typescript</div></div></div>
+        <div class="hconn"><span class="ar">→</span><span class="l">consumed</span></div>
+        <div class="node n-spec tiny" style="max-width:170px"><div class="node__body"><div class="node__head"><span class="node__title">TanStack Query</span></div><div class="node__desc">type-safe calls</div></div></div>
+      </div>
+      <div class="note"><b>Payoff:</b> rename a field in a Pydantic model and the frontend fails to type-check until it's updated — drift becomes a build error, not a production bug.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>CLOCKWISE · ARCHITECTURE SCHEMATICS</span>
+    <span>companion to clockwise-implementation-plan.md</span>
+  </div>
+</footer>
+
+</body>
+</html>
