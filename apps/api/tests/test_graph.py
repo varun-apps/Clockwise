@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
 
 from clockwise_api.config import Settings
 from clockwise_api.graph.build import build_graph
 from clockwise_api.llm.gateway import LLMGateway
+from clockwise_api.memory import MemoryService
 
 _QUERY = "Plan a 4 day trip to Dubai next month"
 
 
-def _config(thread_id: str = "t-graph") -> dict:
+def _gateway() -> LLMGateway:
     settings = Settings(openrouter_api_key=None, database_url="sqlite+aiosqlite:///:memory:")
-    gateway = LLMGateway(settings)
-    return {"configurable": {"thread_id": thread_id, "gateway": gateway}}
+    return LLMGateway(settings)
+
+
+def _config(thread_id: str = "t-graph", memory: MemoryService | None = None) -> dict:
+    memory = memory or MemoryService(InMemoryStore())
+    return {"configurable": {"thread_id": thread_id, "gateway": _gateway(), "memory": memory}}
 
 
 async def test_pass_flow_pauses_at_review_with_draft() -> None:
@@ -112,3 +118,41 @@ async def test_block_safety() -> None:
     )
     assert state["guardrail"]["decision"] == "BLOCK"
     assert state["guardrail"]["category"] == "safety"
+
+
+async def test_memory_shapes_returning_users_plan() -> None:
+    """Phase 5 exit: a returning user's saved preferences shape a new plan."""
+    memory = MemoryService(InMemoryStore())  # shared across both conversations
+    graph = build_graph(InMemorySaver())
+
+    # First trip: the user mentions the beach; approve so the preference persists.
+    cfg1 = _config("t-mem-1", memory)
+    await graph.ainvoke(
+        {"user_query": "Plan a 4 day beach trip to Dubai", "user_id": "u-mem"}, cfg1
+    )
+    final1 = await graph.ainvoke(Command(resume={"action": "approve"}), cfg1)
+    assert "Enjoys beach days" in final1["memory_saved"]
+
+    # Returning user, brand-new conversation, no mention of the beach:
+    cfg2 = _config("t-mem-2", memory)
+    paused2 = await graph.ainvoke(
+        {"user_query": "Plan a 3 day trip to Tokyo", "user_id": "u-mem"}, cfg2
+    )
+    # The saved preference is loaded and measurably shapes the plan.
+    assert "Enjoys beach days" in paused2["memory_context"]
+    assert "beach" in paused2["itinerary_plan"].lower()
+
+
+async def test_memory_isolated_per_user() -> None:
+    memory = MemoryService(InMemoryStore())
+    graph = build_graph(InMemorySaver())
+    cfg = _config("t-iso-1", memory)
+    await graph.ainvoke({"user_query": "Plan a beach trip to Dubai", "user_id": "u-a"}, cfg)
+    await graph.ainvoke(Command(resume={"action": "approve"}), cfg)
+
+    # A different user has no saved beach preference.
+    cfg_other = _config("t-iso-2", memory)
+    paused = await graph.ainvoke(
+        {"user_query": "Plan a 3 day trip to Tokyo", "user_id": "u-b"}, cfg_other
+    )
+    assert paused["memory_context"] == []

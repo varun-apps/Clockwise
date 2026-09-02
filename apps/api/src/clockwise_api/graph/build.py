@@ -1,21 +1,20 @@
 r"""Assemble the LangGraph orchestration graph.
 
-    START -> guardrail -(PASS)-> supervisor -(fan-out)-> [flight|hotel|weather]
-                       \-(BLOCK)-> END          (parallel)        |
-                                                                  v
-       END <- final <-(approve)- human_review <- itinerary <- budget
-                          |                          ^
-                          \--(request_changes)-------/
+    START -> guardrail -(PASS)-> load_memory -> supervisor -(fan-out)-> [flight|hotel|weather]
+                       \-(BLOCK)-> END                       (parallel)        |
+                                                                               v
+       END <- save_memory <- final <-(approve)- human_review <- itinerary <- budget
+                                         |                          ^
+                                         \--(request_changes)-------/
 
-The supervisor conditionally fans out to the selected tool specialists, which
-run in parallel and merge into TravelState; budget is the fan-in convergence
-node, then itinerary drafts the reviewable plan. human_review interrupt()s for
-approval: approve -> final summary, request_changes -> loop back to itinerary
-with feedback. final summarizes.
+load_memory pulls the user's saved preferences into state; the supervisor fans
+out to the selected tool specialists (parallel), budget is the fan-in, itinerary
+drafts the reviewable (personalized) plan. human_review interrupt()s for
+approval: approve -> final, request_changes -> loop back to itinerary. After
+final, save_memory persists preferences learned this run.
 
-Compiled with a checkpointer (Postgres in prod, in-memory in tests). The
-checkpointer is foundational, not optional: it is what makes Phase 4's HITL
-`interrupt()`/resume possible and gives resumability + time-travel today.
+Compiled with a checkpointer (HITL resume + time-travel) and a store (LangMem-
+style long-term memory) — Postgres in prod, in-memory otherwise.
 """
 
 from __future__ import annotations
@@ -31,6 +30,7 @@ from .nodes.guardrail import guardrail_node, route_after_guardrail
 from .nodes.hotel import hotel_node
 from .nodes.human_review import human_review_node, route_after_review
 from .nodes.itinerary import itinerary_node
+from .nodes.memory import load_memory_node, save_memory_node
 from .nodes.supervisor import route_to_specialists, supervisor_node
 from .nodes.weather import weather_node
 from .state import TravelState
@@ -38,15 +38,20 @@ from .state import TravelState
 if TYPE_CHECKING:
     from langgraph.checkpoint.base import BaseCheckpointSaver
     from langgraph.graph.state import CompiledStateGraph
+    from langgraph.store.base import BaseStore
 
 # Tool specialists that fan out in parallel and fan back in to budget.
 _SPECIALISTS = ("flight", "hotel", "weather")
 
 
-def build_graph(checkpointer: BaseCheckpointSaver[Any]) -> CompiledStateGraph[Any, Any, Any]:
+def build_graph(
+    checkpointer: BaseCheckpointSaver[Any],
+    store: BaseStore | None = None,
+) -> CompiledStateGraph[Any, Any, Any]:
     builder = StateGraph(TravelState)
 
     builder.add_node("guardrail", guardrail_node)
+    builder.add_node("load_memory", load_memory_node)
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("flight", flight_node)
     builder.add_node("hotel", hotel_node)
@@ -55,13 +60,16 @@ def build_graph(checkpointer: BaseCheckpointSaver[Any]) -> CompiledStateGraph[An
     builder.add_node("itinerary", itinerary_node)
     builder.add_node("human_review", human_review_node)
     builder.add_node("final", final_node)
+    builder.add_node("save_memory", save_memory_node)
 
     builder.add_edge(START, "guardrail")
+    # PASS -> load the user's long-term preferences, then plan.
     builder.add_conditional_edges(
         "guardrail",
         route_after_guardrail,
-        {"supervisor": "supervisor", "__end__": END},
+        {"load_memory": "load_memory", "__end__": END},
     )
+    builder.add_edge("load_memory", "supervisor")
     # Conditional fan-out: schedule only the selected specialists (in parallel).
     builder.add_conditional_edges(
         "supervisor",
@@ -79,6 +87,8 @@ def build_graph(checkpointer: BaseCheckpointSaver[Any]) -> CompiledStateGraph[An
         route_after_review,
         {"final": "final", "itinerary": "itinerary"},
     )
-    builder.add_edge("final", END)
+    # After the plan is approved, persist preferences learned this run.
+    builder.add_edge("final", "save_memory")
+    builder.add_edge("save_memory", END)
 
-    return builder.compile(checkpointer=checkpointer)
+    return builder.compile(checkpointer=checkpointer, store=store)

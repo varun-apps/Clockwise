@@ -9,8 +9,14 @@ from langchain_core.runnables import RunnableConfig
 
 if TYPE_CHECKING:
     from ...llm.gateway import LLMGateway
+    from ...memory import MemoryService
 
 
 def gateway_from(config: RunnableConfig) -> LLMGateway:
     configurable = config.get("configurable") or {}
     return cast("LLMGateway", configurable["gateway"])
+
+
+def memory_from(config: RunnableConfig) -> MemoryService:
+    configurable = config.get("configurable") or {}
+    return cast("MemoryService", configurable["memory"])

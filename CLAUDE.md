@@ -6,11 +6,12 @@ before making changes.
 ## What this is
 
 Multi-agent trip planner. FastAPI + LangGraph backend (`apps/api`, Python/uv),
-React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–4**:
-`query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
-itinerary → human_review → final`, with the tool specialists in parallel
-fan-out and a resumable human-in-the-loop approval step. Full plan in
-`clockwise-implementation-plan.md`; diagrams in `clockwise-architecture.html`.
+React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–5**:
+`query → guardrail → load_memory → supervisor → [flight ‖ hotel ‖ weather] →
+budget → itinerary → human_review → final → save_memory`, with parallel
+fan-out, a resumable human-in-the-loop approval step, and cross-conversation
+memory. Full plan in `clockwise-implementation-plan.md`; diagrams in
+`clockwise-architecture.html`.
 
 ## Non-negotiable rules
 
@@ -56,6 +57,13 @@ fan-out and a resumable human-in-the-loop approval step. Full plan in
   final; request_changes → loop back to itinerary with `revision_feedback`.
   Resume is checkpoint-based (works across separate requests); never hold a
   connection open across the pause.
+- **Memory:** long-term preferences live in a LangGraph `BaseStore`
+  (`InMemoryStore`/`AsyncPostgresStore`), namespaced `("preferences", user_id)`.
+  `load_memory` reads them into `memory_context` before planning; `save_memory`
+  extracts + persists after approval. Nodes get the `MemoryService` via
+  `config["configurable"]["memory"]` (like the gateway) — inject it in every
+  graph invoke. Extraction lives in `memory.py::extract_preferences` (keep it
+  deterministic so tests run offline).
 - Nodes get the gateway via `config["configurable"]["gateway"]` (see
   `graph/nodes/__init__.py::gateway_from`) — they never construct a client.
 - Node functions must be `async def node(state, config: RunnableConfig)` with an

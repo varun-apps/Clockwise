@@ -14,6 +14,11 @@ from typing import Annotated, Any, TypedDict
 
 class TravelState(TypedDict, total=False):
     user_query: str
+    user_id: str
+
+    # Long-term memory (LangMem-style, loaded from / written to the store)
+    memory_context: list[str]  # preferences loaded for this user
+    memory_saved: list[str]  # preferences persisted at the end of this run
 
     # Guardrail
     guardrail: dict[str, Any]  # {"decision": "PASS"|"BLOCK", "reason": str}

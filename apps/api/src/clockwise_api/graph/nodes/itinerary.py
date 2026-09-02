@@ -31,9 +31,13 @@ def _mock_plan(state: TravelState) -> str:
 
     hotel = hotels[0] if hotels else None
     feedback = state.get("revision_feedback")
+    prefs = state.get("memory_context", []) or []
     lines = [f"# {days}-Day Trip to {destination}", ""]
     if feedback:
         lines.append(f"_Revised per your feedback: {feedback}_")
+        lines.append("")
+    if prefs:
+        lines.append(f"_Personalized from your saved preferences: {', '.join(prefs)}._")
         lines.append("")
     if weather:
         lines.append(
@@ -43,9 +47,14 @@ def _mock_plan(state: TravelState) -> str:
     if hotel:
         lines.append(f"_Staying at {hotel['name']} ({hotel.get('area', 'central')})._")
     lines.append("")
+
+    # Preferences shape the actual days, not just a header.
+    likes_beach = any("beach" in p.lower() for p in prefs)
     for day in range(1, days + 1):
         if day == 1:
             lines.append(f"**Day {day}.** Arrive, check in, and explore near the hotel on foot.")
+        elif likes_beach and day == 2:
+            lines.append(f"**Day {day}.** Beach day — relax by the coast (per your preferences).")
         elif day == days:
             lines.append(f"**Day {day}.** Relaxed morning, souvenirs, and departure.")
         else:
@@ -64,6 +73,7 @@ async def itinerary_node(state: TravelState, config: RunnableConfig) -> dict[str
                 f"Weather: {state.get('weather_info', {})}\n"
                 f"Hotels: {state.get('hotel_results', [])}\n"
                 f"Budget: {state.get('budget_analysis', {})}\n"
+                f"Saved traveler preferences (apply): {state.get('memory_context', [])}\n"
                 f"Revision feedback (apply if present): {state.get('revision_feedback', '')}"
             ),
             mock=_mock_plan(state),

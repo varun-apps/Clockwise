@@ -30,7 +30,8 @@ export function Home() {
         style={styles.form}
         onSubmit={(e) => {
           e.preventDefault();
-          plan.mutate({ query });
+          // Stable user id so long-term preferences carry across trips.
+          plan.mutate({ query, user_id: "demo-user" });
         }}
       >
         <textarea
@@ -115,9 +116,15 @@ function PlanView({ data }: { data: PlanResponse }) {
   }
   const flights = data.flights ?? [];
   const hotels = data.hotels ?? [];
+  const memory = data.memory_used ?? [];
   return (
     <section style={styles.card}>
       {data.summary && <p style={styles.summaryText}>{data.summary}</p>}
+      {memory.length > 0 && (
+        <div style={styles.memory}>
+          <strong>🧠 Personalized from saved preferences:</strong> {memory.join(", ")}
+        </div>
+      )}
       {data.reasoning && <p style={styles.reasoning}>{data.reasoning}</p>}
       {data.weather && (
         <div style={styles.weather}>
@@ -249,6 +256,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 16px",
     fontSize: 14,
     cursor: "pointer",
+  },
+  memory: {
+    margin: "10px 0",
+    padding: 10,
+    background: "rgba(14,139,139,0.08)",
+    borderRadius: 8,
+    fontSize: 13.5,
+    color: "#0e8b8b",
   },
   summaryText: { fontSize: 16, lineHeight: 1.5, marginTop: 0 },
   reasoning: { color: "#5b6472", fontStyle: "italic" },

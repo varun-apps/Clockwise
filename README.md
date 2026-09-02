@@ -7,12 +7,13 @@ traced.
 **Stack:** FastAPI · LangGraph · LangMem¹ · DeepSeek V4 Flash (via an
 OpenAI-compatible gateway) · React + TanStack · Langfuse · Postgres.
 
-> ¹ Memory and the eval harness are on the roadmap — see [Scope](#scope). This
-> repo currently implements **Phases 0–4**:
-> `query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
-> itinerary → human review → final`, with the tool specialists running in
-> **parallel fan-out** and a **resumable human-in-the-loop** approval step,
-> end-to-end and traceable.
+> ¹ The eval harness and deploy are on the roadmap — see [Scope](#scope). This
+> repo currently implements **Phases 0–5**:
+> `query → guardrail → load memory → supervisor → [flight ‖ hotel ‖ weather] →
+> budget → itinerary → human review → final → save memory`, with the tool
+> specialists running in **parallel fan-out**, a **resumable human-in-the-loop**
+> approval step, and **cross-conversation memory** (LangMem-style) that
+> personalizes a returning user's plan — end-to-end and traceable.
 >
 > Architecture diagrams: open [`clockwise-architecture.html`](./clockwise-architecture.html)
 > in a browser. Full roadmap: [`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).
@@ -137,14 +138,23 @@ packages/shared   shared TS constants (node/agent names)
 
 ## Scope
 
-**Implemented (Phases 0–4):** monorepo + tooling + contract sync · FastAPI +
+**Implemented (Phases 0–5):** monorepo + tooling + contract sync · FastAPI +
 Postgres/SQLite + Langfuse + LLM gateway · full LangGraph orchestration —
-guardrail → supervisor → **parallel** flight/hotel/weather → budget →
-itinerary → **human review** → final — with a checkpointer · in-process tools
-(AviationStack/Tavily/weather) with frozen fixtures · hardened guardrail
-(relevance/safety/policy/validity/injection) · **resumable HITL** (`interrupt` +
-`/plan/resume` for approve / request-changes) · React UI with flights, hotels,
-budget, itinerary, and the approve / request-changes review step.
+guardrail → load memory → supervisor → **parallel** flight/hotel/weather →
+budget → itinerary → **human review** → final → save memory — with a
+checkpointer · in-process tools (AviationStack/Tavily/weather) with frozen
+fixtures · hardened guardrail (relevance/safety/policy/validity/injection) ·
+**resumable HITL** (`interrupt` + `/plan/resume` for approve / request-changes) ·
+**cross-conversation memory** on LangGraph's store (per-user preferences that
+personalize a returning plan) · React UI with flights, hotels, budget,
+itinerary, the review step, and a memory badge.
+
+**Memory:** LangMem-style long-term memory on LangGraph's `BaseStore`
+(`InMemoryStore` locally, `AsyncPostgresStore` with Postgres — the same
+substrate LangMem persists into). Preferences are namespaced per `user_id`,
+loaded before planning and written back after approval. Extraction is
+deterministic (offline) and routed through the gateway so it can be swapped for
+LangMem's LLM extractor when live.
 
 **Execution model:** the review pause is **synchronous + checkpoint-resumed**,
 not worker-backed — `/plan` runs to the `interrupt()` and returns
@@ -152,8 +162,8 @@ not worker-backed — `/plan` runs to the `interrupt()` and returns
 checkpoint by `thread_id` and continues. A background worker is deferred to
 Phase 8 if load demands it.
 
-**Roadmap (Phases 5–8):** LangMem memory · full chat + streaming UI ·
-evaluation harness & model-tiering experiment · Hostinger deploy. The state
-shape, model-tiering hook, mock-fixture pattern, and checkpointer are already in
-place so each phase is additive. See
+**Roadmap (Phases 6–8):** full chat + streaming UI · evaluation harness &
+model-tiering experiment · Hostinger deploy. The state shape, model-tiering
+hook, mock-fixture pattern, checkpointer, and store are already in place so each
+phase is additive. See
 [`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).

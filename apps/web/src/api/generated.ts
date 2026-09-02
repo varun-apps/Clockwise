@@ -267,6 +267,12 @@ export interface components {
              * @description Continue an existing conversation, or omit to start one
              */
             conversation_id?: string | null;
+            /**
+             * User Id
+             * @description Stable id used to load/save long-term preferences
+             * @default anonymous
+             */
+            user_id: string;
         };
         /** PlanResponse */
         PlanResponse: {
@@ -299,6 +305,8 @@ export interface components {
             itinerary_plan?: string | null;
             /** Summary */
             summary?: string | null;
+            /** Memory Used */
+            memory_used?: string[];
             /** Llm Calls */
             llm_calls?: components["schemas"]["LLMCall"][];
         };

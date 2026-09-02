@@ -68,6 +68,7 @@ def _completed_response(convo: Conversation, state: dict[str, Any]) -> PlanRespo
         budget=BudgetAnalysis(**budget_raw) if budget_raw else None,
         itinerary_plan=state.get("itinerary_plan"),
         summary=state.get("summary"),
+        memory_used=state.get("memory_context", []) or [],
         llm_calls=[LLMCall(**c) for c in state.get("llm_calls", [])],
     )
 
@@ -92,10 +93,20 @@ async def plan(
     convo = await _get_or_create_conversation(session, body.conversation_id, body.query)
     session.add(Message(conversation_id=convo.id, role="user", content=body.query))
 
-    config = {"configurable": {"thread_id": convo.thread_id, "gateway": gateway}}
+    config = {
+        "configurable": {
+            "thread_id": convo.thread_id,
+            "gateway": gateway,
+            "memory": request.app.state.memory,
+        }
+    }
     with span("clockwise.plan", thread_id=convo.thread_id):
         state = await graph.ainvoke(
-            {"user_query": body.query, "messages": [{"role": "user", "content": body.query}]},
+            {
+                "user_query": body.query,
+                "user_id": body.user_id,
+                "messages": [{"role": "user", "content": body.query}],
+            },
             config,
         )
 
@@ -142,7 +153,13 @@ async def resume(
     if convo is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    config = {"configurable": {"thread_id": convo.thread_id, "gateway": gateway}}
+    config = {
+        "configurable": {
+            "thread_id": convo.thread_id,
+            "gateway": gateway,
+            "memory": request.app.state.memory,
+        }
+    }
 
     # Only resume a conversation that is actually paused at review.
     snapshot = await graph.aget_state(config)
