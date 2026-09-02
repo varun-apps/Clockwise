@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from ..config import Settings
 
-# Nodes not listed fall back to the default tier.
-_SYNTHESIS_NODES = {"final"}
+# Synthesis nodes are the LLM reasoning steps the Phase 7 eval may promote to a
+# stronger tier. Tool-calling nodes (flight/hotel/weather) don't call the LLM.
+_SYNTHESIS_NODES = {"budget", "itinerary", "final"}
 
 
 def model_for(node: str, settings: Settings) -> str:

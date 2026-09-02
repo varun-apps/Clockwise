@@ -41,6 +41,36 @@ class WeatherInfo(BaseModel):
     conditions: list[str] = Field(default_factory=list)
 
 
+class FlightOption(BaseModel):
+    airline: str
+    flight_number: str
+    origin: str
+    destination: str
+    depart_time: str | None = None
+    price: float
+    currency: str = "USD"
+    duration: str | None = None
+
+
+class HotelOption(BaseModel):
+    name: str
+    area: str | None = None
+    rating: float | None = None
+    price_per_night: float
+    currency: str = "USD"
+    nights: int | None = None
+    total: float | None = None
+
+
+class BudgetAnalysis(BaseModel):
+    currency: str = "USD"
+    flights_total: float | None = None
+    hotels_total: float | None = None
+    daily_estimate: float | None = None
+    grand_total: float | None = None
+    notes: str | None = None
+
+
 class LLMCall(BaseModel):
     node: str
     model: str
@@ -65,7 +95,11 @@ class PlanResponse(BaseModel):
     selected_agents: list[AgentName] = Field(default_factory=list)
     trip_constraints: TripConstraints | None = None
     weather: WeatherInfo | None = None
+    flights: list[FlightOption] = Field(default_factory=list)
+    hotels: list[HotelOption] = Field(default_factory=list)
+    budget: BudgetAnalysis | None = None
     itinerary_plan: str | None = None
+    summary: str | None = None
     llm_calls: list[LLMCall] = Field(default_factory=list)
 
 

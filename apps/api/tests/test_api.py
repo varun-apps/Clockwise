@@ -19,7 +19,12 @@ async def test_plan_completed_and_persisted(client) -> None:  # type: ignore[no-
     assert data["status"] == "completed"
     assert data["weather"]["destination"] == "Tokyo"
     assert data["itinerary_plan"]
-    assert "weather" in [a for a in data["selected_agents"]]
+    assert data["summary"]
+    assert "weather" in data["selected_agents"]
+    # Fan-out specialists populated their slices.
+    assert len(data["flights"]) >= 1
+    assert len(data["hotels"]) >= 1
+    assert data["budget"]["grand_total"] > 0
 
     # Conversation + both messages persisted.
     convo_id = data["conversation_id"]

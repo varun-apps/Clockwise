@@ -1,0 +1,74 @@
+{
+  "default": [
+    {
+      "airline": "Emirates",
+      "flight_number": "EK202",
+      "depart_time": "09:15",
+      "price": 780.0,
+      "currency": "USD",
+      "duration": "13h 55m"
+    },
+    {
+      "airline": "Qatar Airways",
+      "flight_number": "QR704",
+      "depart_time": "22:40",
+      "price": 720.0,
+      "currency": "USD",
+      "duration": "15h 20m"
+    }
+  ],
+  "dubai": [
+    {
+      "airline": "Emirates",
+      "flight_number": "EK502",
+      "depart_time": "08:30",
+      "price": 690.0,
+      "currency": "USD",
+      "duration": "3h 30m"
+    },
+    {
+      "airline": "flydubai",
+      "flight_number": "FZ458",
+      "depart_time": "14:10",
+      "price": 540.0,
+      "currency": "USD",
+      "duration": "3h 45m"
+    }
+  ],
+  "tokyo": [
+    {
+      "airline": "ANA",
+      "flight_number": "NH898",
+      "depart_time": "17:05",
+      "price": 950.0,
+      "currency": "USD",
+      "duration": "11h 40m"
+    },
+    {
+      "airline": "Japan Airlines",
+      "flight_number": "JL7075",
+      "depart_time": "11:25",
+      "price": 1010.0,
+      "currency": "USD",
+      "duration": "12h 05m"
+    }
+  ],
+  "london": [
+    {
+      "airline": "British Airways",
+      "flight_number": "BA286",
+      "depart_time": "16:20",
+      "price": 610.0,
+      "currency": "USD",
+      "duration": "10h 15m"
+    },
+    {
+      "airline": "Virgin Atlantic",
+      "flight_number": "VS42",
+      "depart_time": "19:50",
+      "price": 580.0,
+      "currency": "USD",
+      "duration": "10h 30m"
+    }
+  ]
+}

@@ -6,10 +6,10 @@ before making changes.
 ## What this is
 
 Multi-agent trip planner. FastAPI + LangGraph backend (`apps/api`, Python/uv),
-React + TanStack frontend (`apps/web`, pnpm). Currently a **thin vertical
-slice** (Phases 0–2): `query → guardrail → supervisor → weather specialist →
-final response`. Full plan in `clockwise-implementation-plan.md`; diagrams in
-`clockwise-architecture.html`.
+React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–3**:
+`query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
+itinerary → final`, with the tool specialists in parallel fan-out. Full plan in
+`clockwise-implementation-plan.md`; diagrams in `clockwise-architecture.html`.
 
 ## Non-negotiable rules
 
@@ -38,8 +38,17 @@ final response`. Full plan in `clockwise-implementation-plan.md`; diagrams in
 
 ## How the graph works
 
-- `graph/build.py` wires `START → guardrail →(PASS)→ supervisor → weather →
-  final → END`; guardrail `BLOCK` routes straight to `END`.
+- `graph/build.py` wires `START → guardrail →(PASS)→ supervisor →(fan-out)→
+  [flight ‖ hotel ‖ weather] → budget → itinerary → final → END`; guardrail
+  `BLOCK` routes straight to `END`.
+- **Fan-out/fan-in:** the supervisor's `route_to_specialists` conditional edge
+  schedules only the selected tool specialists (they run in parallel); each has
+  an edge to `budget`, which runs once after they converge (fan-in). Parallel
+  writes are safe because each specialist owns a distinct state key, and
+  `messages`/`llm_calls` use additive reducers.
+- **Tool specialists** (flight/hotel/weather) call an in-process tool and don't
+  use the LLM. **LLM specialists** (budget/itinerary/final) call the gateway;
+  their node names are in the synthesis tier in `model_config.py`.
 - Nodes get the gateway via `config["configurable"]["gateway"]` (see
   `graph/nodes/__init__.py::gateway_from`) — they never construct a client.
 - Node functions must be `async def node(state, config: RunnableConfig)` with an

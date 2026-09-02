@@ -76,6 +76,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BudgetAnalysis */
+        BudgetAnalysis: {
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** Flights Total */
+            flights_total?: number | null;
+            /** Hotels Total */
+            hotels_total?: number | null;
+            /** Daily Estimate */
+            daily_estimate?: number | null;
+            /** Grand Total */
+            grand_total?: number | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** ConversationDetail */
         ConversationDetail: {
             /**
@@ -122,6 +140,28 @@ export interface components {
              */
             updated_at: string;
         };
+        /** FlightOption */
+        FlightOption: {
+            /** Airline */
+            airline: string;
+            /** Flight Number */
+            flight_number: string;
+            /** Origin */
+            origin: string;
+            /** Destination */
+            destination: string;
+            /** Depart Time */
+            depart_time?: string | null;
+            /** Price */
+            price: number;
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** Duration */
+            duration?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -147,6 +187,26 @@ export interface components {
              * @enum {string}
              */
             langfuse: "enabled" | "disabled";
+        };
+        /** HotelOption */
+        HotelOption: {
+            /** Name */
+            name: string;
+            /** Area */
+            area?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /** Price Per Night */
+            price_per_night: number;
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** Nights */
+            nights?: number | null;
+            /** Total */
+            total?: number | null;
         };
         /** LLMCall */
         LLMCall: {
@@ -213,8 +273,15 @@ export interface components {
             selected_agents?: ("flight" | "hotel" | "weather" | "budget" | "itinerary")[];
             trip_constraints?: components["schemas"]["TripConstraints"] | null;
             weather?: components["schemas"]["WeatherInfo"] | null;
+            /** Flights */
+            flights?: components["schemas"]["FlightOption"][];
+            /** Hotels */
+            hotels?: components["schemas"]["HotelOption"][];
+            budget?: components["schemas"]["BudgetAnalysis"] | null;
             /** Itinerary Plan */
             itinerary_plan?: string | null;
+            /** Summary */
+            summary?: string | null;
             /** Llm Calls */
             llm_calls?: components["schemas"]["LLMCall"][];
         };

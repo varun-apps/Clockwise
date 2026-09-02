@@ -29,6 +29,7 @@ class TravelState(TypedDict, total=False):
     weather_info: dict[str, Any]
     budget_analysis: dict[str, Any]
     itinerary_plan: str
+    summary: str
 
     # Cross-cutting
     messages: Annotated[list[dict[str, Any]], operator.add]
