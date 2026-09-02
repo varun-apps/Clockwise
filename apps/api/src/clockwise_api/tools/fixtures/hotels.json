@@ -1,0 +1,66 @@
+{
+  "default": [
+    {
+      "name": "City Center Grand",
+      "area": "Downtown",
+      "rating": 4.4,
+      "price_per_night": 160.0,
+      "currency": "USD"
+    },
+    {
+      "name": "Harbour Boutique Hotel",
+      "area": "Waterfront",
+      "rating": 4.6,
+      "price_per_night": 210.0,
+      "currency": "USD"
+    }
+  ],
+  "dubai": [
+    {
+      "name": "Marina Bay Suites",
+      "area": "Dubai Marina",
+      "rating": 4.5,
+      "price_per_night": 190.0,
+      "currency": "USD"
+    },
+    {
+      "name": "Downtown Skyline Hotel",
+      "area": "Downtown Dubai",
+      "rating": 4.7,
+      "price_per_night": 240.0,
+      "currency": "USD"
+    }
+  ],
+  "tokyo": [
+    {
+      "name": "Shinjuku Park Hotel",
+      "area": "Shinjuku",
+      "rating": 4.5,
+      "price_per_night": 175.0,
+      "currency": "USD"
+    },
+    {
+      "name": "Ginza Riverside Inn",
+      "area": "Ginza",
+      "rating": 4.3,
+      "price_per_night": 150.0,
+      "currency": "USD"
+    }
+  ],
+  "london": [
+    {
+      "name": "Kensington Court",
+      "area": "Kensington",
+      "rating": 4.4,
+      "price_per_night": 220.0,
+      "currency": "USD"
+    },
+    {
+      "name": "Southbank Boutique",
+      "area": "South Bank",
+      "rating": 4.6,
+      "price_per_night": 260.0,
+      "currency": "USD"
+    }
+  ]
+}

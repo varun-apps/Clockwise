@@ -45,14 +45,13 @@ def _heuristic(query: str) -> dict[str, Any]:
         "budget": None,
         "notes": None,
     }
-    # Thin slice implements the weather specialist; itinerary always synthesizes.
     return {
         "trip_constraints": constraints,
-        "selected_agents": ["weather", "itinerary"],
+        "selected_agents": ["flight", "hotel", "weather", "budget", "itinerary"],
         "reasoning": (
             f"Planning a {duration or 'multi'}-day trip"
             + (f" to {destination}" if destination else "")
-            + "; gather weather then draft an itinerary."
+            + "; gather flights, hotels and weather, then budget and itinerary."
         ),
     }
 
@@ -73,3 +72,18 @@ async def supervisor_node(state: TravelState, config: RunnableConfig) -> dict[st
         "reasoning": data.get("reasoning", ""),
         "llm_calls": [call.as_call_record()],
     }
+
+
+# Tool specialists that participate in the parallel fan-out.
+_FANOUT_AGENTS = ("flight", "hotel", "weather")
+
+
+def route_to_specialists(state: TravelState) -> list[str]:
+    """Conditional fan-out: schedule the selected tool specialists in parallel.
+
+    Returns the subset of selected agents that are tool specialists. If none are
+    selected, routes straight to budget (the fan-in convergence node).
+    """
+    selected = state.get("selected_agents", []) or []
+    fanout = [a for a in _FANOUT_AGENTS if a in selected]
+    return fanout or ["budget"]

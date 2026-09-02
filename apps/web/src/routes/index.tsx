@@ -54,14 +54,57 @@ function PlanView({ data }: { data: PlanResponse }) {
       </section>
     );
   }
+  const flights = data.flights ?? [];
+  const hotels = data.hotels ?? [];
   return (
     <section style={styles.card}>
+      {data.summary && <p style={styles.summaryText}>{data.summary}</p>}
       {data.reasoning && <p style={styles.reasoning}>{data.reasoning}</p>}
       {data.weather && (
         <div style={styles.weather}>
           <strong>{data.weather.destination}:</strong> {data.weather.summary}
         </div>
       )}
+
+      {(flights.length > 0 || hotels.length > 0) && (
+        <div style={styles.grid}>
+          {flights.length > 0 && (
+            <div>
+              <h3 style={styles.h3}>Flights</h3>
+              <ul style={styles.list}>
+                {flights.map((f) => (
+                  <li key={f.flight_number}>
+                    {f.airline} {f.flight_number} — {f.currency} {f.price}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {hotels.length > 0 && (
+            <div>
+              <h3 style={styles.h3}>Hotels</h3>
+              <ul style={styles.list}>
+                {hotels.map((h) => (
+                  <li key={h.name}>
+                    {h.name} — {h.currency} {h.price_per_night}/night
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {data.budget && (
+        <div style={styles.budget}>
+          <strong>Estimated total:</strong> {data.budget.currency}{" "}
+          {data.budget.grand_total?.toLocaleString()} &nbsp;
+          <span style={styles.muted}>
+            (flights {data.budget.flights_total}, hotels {data.budget.hotels_total})
+          </span>
+        </div>
+      )}
+
       <pre style={styles.itinerary}>{data.itinerary_plan}</pre>
       <details>
         <summary style={styles.summary}>Agents &amp; model calls</summary>
@@ -118,8 +161,20 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #d3dae3",
     background: "#fff",
   },
+  summaryText: { fontSize: 16, lineHeight: 1.5, marginTop: 0 },
   reasoning: { color: "#5b6472", fontStyle: "italic" },
   weather: { margin: "10px 0", padding: 10, background: "#f6f8fb", borderRadius: 8 },
+  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, margin: "12px 0" },
+  h3: { fontSize: 14, margin: "0 0 6px", color: "#3e63dd" },
+  list: { margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.6 },
+  budget: {
+    margin: "10px 0",
+    padding: 10,
+    background: "#f0fbf4",
+    borderRadius: 8,
+    fontSize: 14,
+  },
+  muted: { color: "#5b6472", fontSize: 12.5 },
   itinerary: { whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 15, lineHeight: 1.6 },
   summary: { cursor: "pointer", color: "#6e56cf" },
   error: { color: "#e5484d", marginTop: 16 },

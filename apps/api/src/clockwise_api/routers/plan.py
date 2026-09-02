@@ -17,6 +17,9 @@ from ..db import get_session
 from ..models import Conversation, Message
 from ..observability import span
 from ..schemas import (
+    BudgetAnalysis,
+    FlightOption,
+    HotelOption,
     LLMCall,
     PlanRequest,
     PlanResponse,
@@ -77,10 +80,15 @@ async def plan(
         )
 
     itinerary = state.get("itinerary_plan")
+    summary = state.get("summary")
     weather_raw = state.get("weather_info")
     constraints_raw = state.get("trip_constraints")
-    if itinerary:
-        session.add(Message(conversation_id=convo.id, role="assistant", content=itinerary))
+    budget_raw = state.get("budget_analysis")
+
+    # Persist the summary (the traveler-facing wrap-up) as the assistant turn.
+    assistant_message = summary or itinerary
+    if assistant_message:
+        session.add(Message(conversation_id=convo.id, role="assistant", content=assistant_message))
     await session.commit()
 
     return PlanResponse(
@@ -91,6 +99,10 @@ async def plan(
         selected_agents=state.get("selected_agents", []),
         trip_constraints=TripConstraints(**constraints_raw) if constraints_raw else None,
         weather=WeatherInfo(**weather_raw) if weather_raw else None,
+        flights=[FlightOption(**f) for f in state.get("flight_results", []) or []],
+        hotels=[HotelOption(**h) for h in state.get("hotel_results", []) or []],
+        budget=BudgetAnalysis(**budget_raw) if budget_raw else None,
         itinerary_plan=itinerary,
+        summary=summary,
         llm_calls=llm_calls,
     )

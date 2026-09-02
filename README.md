@@ -7,10 +7,11 @@ traced.
 **Stack:** FastAPI · LangGraph · LangMem¹ · DeepSeek V4 Flash (via an
 OpenAI-compatible gateway) · React + TanStack · Langfuse · Postgres.
 
-> ¹ Memory, human-in-the-loop, the full specialist fleet, and the eval harness
-> are on the roadmap — see [Scope](#scope). This repo currently implements a
-> **thin vertical slice** (Phases 0–2): `query → guardrail → supervisor →
-> weather specialist → final response`, running end-to-end and traceable.
+> ¹ Memory, human-in-the-loop, and the eval harness are on the roadmap — see
+> [Scope](#scope). This repo currently implements **Phases 0–3**:
+> `query → guardrail → supervisor → [flight ‖ hotel ‖ weather] → budget →
+> itinerary → final`, with the tool specialists running in **parallel fan-out**,
+> end-to-end and traceable.
 >
 > Architecture diagrams: open [`clockwise-architecture.html`](./clockwise-architecture.html)
 > in a browser. Full roadmap: [`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).
@@ -135,13 +136,15 @@ packages/shared   shared TS constants (node/agent names)
 
 ## Scope
 
-**Implemented (Phases 0–2):** monorepo + tooling + contract sync · FastAPI +
-Postgres/SQLite + Langfuse + LLM gateway · LangGraph slice
-(guardrail → supervisor → weather → final) with a checkpointer · minimal React UI.
+**Implemented (Phases 0–3):** monorepo + tooling + contract sync · FastAPI +
+Postgres/SQLite + Langfuse + LLM gateway · full LangGraph orchestration —
+guardrail → supervisor → **parallel** flight/hotel/weather specialists →
+budget → itinerary → final — with a checkpointer · in-process tools
+(AviationStack/Tavily/weather) with frozen fixtures · React UI showing flights,
+hotels, budget, and the itinerary.
 
-**Roadmap (Phases 3–8):** all specialists (flight/hotel/budget/itinerary) +
-real tools & fan-out · human-in-the-loop (`interrupt`/resume) · LangMem memory ·
-full chat + streaming UI · evaluation harness & model-tiering experiment ·
-Hostinger deploy. The state shape, model-tiering hook, mock-fixture pattern, and
-checkpointer are already in place so each phase is additive. See
-[`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).
+**Roadmap (Phases 4–8):** human-in-the-loop (`interrupt`/resume) · LangMem
+memory · full chat + streaming UI · evaluation harness & model-tiering
+experiment · Hostinger deploy. The state shape, model-tiering hook,
+mock-fixture pattern, and checkpointer are already in place so each phase is
+additive. See [`clockwise-implementation-plan.md`](./clockwise-implementation-plan.md).

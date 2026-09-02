@@ -1,7 +1,8 @@
-"""Final response node: synthesizes the reviewable itinerary from state.
+"""Final response node: assembles the plan into a short readable wrap-up.
 
-Uses the synthesis model tier (see model_config). In mock mode it assembles a
-deterministic day-wise plan from the constraints + weather already in state.
+Runs after the itinerary is drafted (and, from Phase 4, after human approval).
+Reads the itinerary + budget and writes a brief ``summary``. Uses the synthesis
+model tier (see model_config).
 """
 
 from __future__ import annotations
@@ -15,46 +16,41 @@ from ..state import TravelState
 from . import gateway_from
 
 _SYSTEM = (
-    "You are the final response agent for a trip planner. Using the trip "
-    "constraints and gathered weather, write a concise, friendly day-by-day "
-    "itinerary in Markdown. Be practical and reference the weather."
+    "You are the final response agent for a trip planner. In 2-3 sentences, "
+    "summarize the plan for the traveler: destination, length, the standout of "
+    "the itinerary, and the estimated total cost. Warm and concise."
 )
 
 
-def _mock_plan(constraints: dict[str, Any], weather: dict[str, Any]) -> str:
+def _mock_summary(state: TravelState) -> str:
+    constraints = state.get("trip_constraints", {}) or {}
+    budget = state.get("budget_analysis", {}) or {}
     destination = constraints.get("destination") or "your destination"
     days = constraints.get("duration_days") or 3
-    lines = [f"# {days}-Day Trip to {destination}", ""]
-    if weather:
-        lines.append(
-            f"_Weather: {weather.get('summary', 'n/a')} "
-            f"(avg {weather.get('avg_low_c', '?')}–{weather.get('avg_high_c', '?')}°C)_"
-        )
-        lines.append("")
-    for day in range(1, int(days) + 1):
-        if day == 1:
-            lines.append(f"**Day {day}.** Arrive, settle in, and explore the area on foot.")
-        elif day == int(days):
-            lines.append(f"**Day {day}.** Relaxed morning, souvenirs, and departure.")
-        else:
-            lines.append(f"**Day {day}.** Key sights and a local meal; adjust for weather.")
-    return "\n".join(lines)
+    total = budget.get("grand_total")
+    currency = budget.get("currency", "USD")
+    cost = f" Estimated total: {currency} {total:,.0f}." if total else ""
+    return (
+        f"Here's your {days}-day plan for {destination}, with weather-aware "
+        f"days and a hand-picked hotel.{cost} Review the itinerary below."
+    )
 
 
 async def final_node(state: TravelState, config: RunnableConfig) -> dict[str, Any]:
-    constraints = state.get("trip_constraints", {}) or {}
-    weather = state.get("weather_info", {}) or {}
     gateway = gateway_from(config)
-    user = f"Trip constraints: {constraints}\nWeather: {weather}\nWrite the day-by-day itinerary."
     with span("node.final"):
         result = await gateway.complete_text(
             node="final",
             system=_SYSTEM,
-            user=user,
-            mock=_mock_plan(constraints, weather),
+            user=(
+                f"Constraints: {state.get('trip_constraints', {})}\n"
+                f"Budget: {state.get('budget_analysis', {})}\n"
+                f"Itinerary:\n{state.get('itinerary_plan', '')}"
+            ),
+            mock=_mock_summary(state),
         )
     return {
-        "itinerary_plan": result.content,
+        "summary": result.content,
         "messages": [{"role": "assistant", "content": result.content}],
         "llm_calls": [result.as_call_record()],
     }

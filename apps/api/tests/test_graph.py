@@ -29,6 +29,31 @@ async def test_pass_flow_populates_state() -> None:
     assert all(c["mocked"] for c in state["llm_calls"])
 
 
+async def test_full_fanout_populates_every_slice() -> None:
+    """Phase 3 exit: a full query populates every state slice via fan-out."""
+    graph = build_graph(InMemorySaver())
+    state = await graph.ainvoke({"user_query": "Plan a 4 day trip to Dubai next month"}, _config())
+
+    # Parallel specialists each wrote their slice.
+    assert len(state["flight_results"]) >= 1
+    assert len(state["hotel_results"]) >= 1
+    assert state["weather_info"]["destination"].lower() == "dubai"
+
+    # Fan-in budget aggregated the tool results.
+    budget = state["budget_analysis"]
+    assert budget["grand_total"] > 0
+    assert budget["flights_total"] > 0
+    assert budget["hotels_total"] > 0
+
+    # Synthesis produced both the plan and the wrap-up.
+    assert state["itinerary_plan"]
+    assert state["summary"]
+
+    # One LLM call per synthesis node (supervisor, guardrail, budget, itinerary, final).
+    nodes_called = {c["node"] for c in state["llm_calls"]}
+    assert {"guardrail", "supervisor", "budget", "itinerary", "final"} <= nodes_called
+
+
 async def test_block_injection_short_circuits() -> None:
     graph = build_graph(InMemorySaver())
     state = await graph.ainvoke(
