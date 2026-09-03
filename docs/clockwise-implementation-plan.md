@@ -93,13 +93,16 @@ Multi-agent AI trip-planning system. Monorepo, Python/FastAPI backend, React + T
 
 **Goal:** the user-facing chat and review experience.
 
-- [ ] Scaffold: Vite + React + TanStack Router + TanStack Query, consuming the generated API client
-- [ ] Chat/input surface with streaming (SSE/WebSocket) showing agent progress
-- [ ] HITL review screen: render the itinerary, Approve / Request Changes, wired to the resume endpoints
-- [ ] Consider TanStack Table (flight/hotel comparison) and TanStack Form (constraints)
-- [ ] **Decide** auth/multi-user scope; add login/session if needed
+- [x] Scaffold: Vite + React + TanStack Router + TanStack Query, consuming the generated API client — plus Tailwind v4 + a Radix-free shadcn-style component system with light/dark themes
+- [x] Chat/input surface with **SSE streaming** showing live per-node agent progress (new `POST /plan/stream` + `/plan/resume/stream` driving `graph.astream`; fetch+ReadableStream client)
+- [x] HITL review screen: structured itinerary + flight/hotel/budget/weather cards, Approve / Request Changes wired to the resume-stream endpoints
+- [x] Conversation sidebar + per-conversation route (`/c/$id`) with persisted history from `/conversations`
+- [ ] _Deferred:_ TanStack Table (flight/hotel comparison) and TanStack Form (constraints) — current card/list presentation suffices
+- [x] **Decided** auth/multi-user scope: single stable `demo-user` id, no login (out of scope for this slice)
 
-**Exit:** a user plans a trip start-to-finish in the browser, including the approval loop.
+**Exit:** ✅ a user plans a trip start-to-finish in the browser, including the streaming
+progress and the approve / request-changes loop. Verified end-to-end offline (mock
+mode) via Playwright.
 
 ---
 

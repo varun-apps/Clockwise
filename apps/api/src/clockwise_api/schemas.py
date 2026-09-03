@@ -133,3 +133,45 @@ class ConversationRead(BaseModel):
 
 class ConversationDetail(ConversationRead):
     messages: list[MessageRead] = Field(default_factory=list)
+
+
+# --- SSE streaming envelopes -------------------------------------------------
+# These serialize the events emitted by POST /plan/stream and
+# /plan/resume/stream. They are NOT part of any OpenAPI path (text/event-stream
+# bodies aren't modeled by FastAPI), so they don't reach the generated TS
+# client. The frontend mirror lives in `apps/web/src/api/events.ts`; keep the
+# two in sync. The terminal event reuses `PlanResponse` verbatim so the big
+# payload has a single source of truth (zero drift).
+
+
+class StreamMeta(BaseModel):
+    """First event: identifies the conversation/thread the stream belongs to."""
+
+    type: Literal["meta"] = "meta"
+    conversation_id: uuid.UUID
+    thread_id: str
+
+
+class StreamNode(BaseModel):
+    """Progress event: a graph node finished. `selected_agents` is only carried
+    on the supervisor event so the UI knows which specialists to expect."""
+
+    type: Literal["node"] = "node"
+    node: str
+    status: Literal["completed"] = "completed"
+    selected_agents: list[AgentName] | None = None
+
+
+class StreamError(BaseModel):
+    """Terminal error event (headers are already sent mid-stream, so failures
+    travel as an event rather than an HTTP error)."""
+
+    type: Literal["error"] = "error"
+    message: str
+
+
+class StreamResult(BaseModel):
+    """Terminal event carrying the canonical plan payload."""
+
+    type: Literal["completed", "awaiting_review", "blocked"]
+    plan: PlanResponse
