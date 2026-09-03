@@ -6,12 +6,35 @@ before making changes.
 ## What this is
 
 Multi-agent trip planner. FastAPI + LangGraph backend (`apps/api`, Python/uv),
-React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–5**:
+React + TanStack frontend (`apps/web`, pnpm). Currently **Phases 0–6**:
 `query → guardrail → load_memory → supervisor → [flight ‖ hotel ‖ weather] →
 budget → itinerary → human_review → final → save_memory`, with parallel
 fan-out, a resumable human-in-the-loop approval step, and cross-conversation
-memory. Full plan in `clockwise-implementation-plan.md`; diagrams in
-`clockwise-architecture.html`.
+memory. **Phase 6** adds the frontend: a streaming chat UI (SSE endpoints
+`POST /plan/stream` + `/plan/resume/stream` driving `graph.astream`) with live
+per-node progress, structured plan cards, the approve / request-changes review
+loop, a conversation sidebar, and Tailwind v4 + shadcn-style theming. Full plan
+in `clockwise-implementation-plan.md`; diagrams in `clockwise-architecture.html`.
+
+## Frontend notes (Phase 6)
+
+- **SSE events aren't in OpenAPI.** The streaming endpoints return
+  `text/event-stream`, so their event payloads can't be codegen'd. The Pydantic
+  envelopes (`StreamMeta/StreamNode/StreamError/StreamResult` in `schemas.py`)
+  and the hand-authored FE union (`apps/web/src/api/events.ts`) are mirrors —
+  keep them in sync. The terminal event reuses `PlanResponse` (zero drift).
+- **Streaming generator must not use the request session.** A `StreamingResponse`
+  body runs after the endpoint returns, so `_stream_graph` commits the
+  conversation/user message first, then opens a fresh session via
+  `get_sessionmaker()` for the post-run assistant write.
+- **Interrupt detection = `aget_state().next` contains `"human_review"`**, not
+  chunk string-matching. Build the terminal `PlanResponse` from
+  `aget_state().values` — never hand-merge astream deltas.
+- **Streaming is kicked off only from event handlers**, never `useEffect`
+  (StrictMode guard). `ChatStreamProvider` owns the in-flight turn at layout
+  level so it survives the `index → /c/$id` navigation.
+- shadcn components under `apps/web/src/components/ui/` are Radix-free and
+  biome-ignored; `src/index.css` (Tailwind v4 at-rules) is biome-ignored too.
 
 ## Non-negotiable rules
 

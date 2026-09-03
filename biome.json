@@ -7,6 +7,8 @@
       "packages/**/*.ts",
       "*.json",
       "!**/generated.ts",
+      "!apps/web/src/components/ui",
+      "!apps/web/src/index.css",
       "!**/dist",
       "!**/node_modules"
     ]

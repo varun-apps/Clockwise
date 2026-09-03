@@ -9,8 +9,11 @@ export type PlanResponse =
 export type ResumeRequest =
   paths["/plan/resume"]["post"]["requestBody"]["content"]["application/json"];
 export type HealthResponse = components["schemas"]["HealthResponse"];
+export type ConversationRead = components["schemas"]["ConversationRead"];
+export type ConversationDetail = components["schemas"]["ConversationDetail"];
+export type MessageRead = components["schemas"]["MessageRead"];
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -39,4 +42,12 @@ export async function postResume(body: ResumeRequest): Promise<PlanResponse> {
     body: JSON.stringify(body),
   });
   return json<PlanResponse>(res);
+}
+
+export async function getConversations(): Promise<ConversationRead[]> {
+  return json<ConversationRead[]>(await fetch(`${API_BASE}/conversations`));
+}
+
+export async function getConversation(id: string): Promise<ConversationDetail> {
+  return json<ConversationDetail>(await fetch(`${API_BASE}/conversations/${id}`));
 }
