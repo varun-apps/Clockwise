@@ -1,6 +1,5 @@
 packages:
   - "apps/web"
-  - "packages/*"
 
 # Allow esbuild (used by Vite) to run its postinstall build script.
 allowBuilds:
