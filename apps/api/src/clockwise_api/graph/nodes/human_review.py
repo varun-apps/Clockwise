@@ -18,6 +18,7 @@ from typing import Any
 
 from langgraph.types import interrupt
 
+from ...schemas import ReviewDecision
 from ..state import TravelState
 
 
@@ -29,14 +30,15 @@ async def human_review_node(state: TravelState) -> dict[str, Any]:
             "budget": state.get("budget_analysis"),
         }
     )
-    action = decision.get("action", "approve")
-    update: dict[str, Any] = {"review_decision": decision}
-    if action == "request_changes":
-        update["revision_feedback"] = decision.get("feedback", "")
+    review = ReviewDecision(**decision)
+    update: dict[str, Any] = {"review_decision": review}
+    if review.action == "request_changes":
+        update["revision_feedback"] = review.feedback or ""
     return update
 
 
 def route_after_review(state: TravelState) -> str:
     """approve -> final; request_changes -> back to itinerary for a re-draft."""
-    action = state.get("review_decision", {}).get("action", "approve")
+    review = state.get("review_decision")
+    action = review.action if review is not None else "approve"
     return "itinerary" if action == "request_changes" else "final"

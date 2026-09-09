@@ -28,9 +28,9 @@ async def test_pass_flow_pauses_at_review_with_draft() -> None:
     graph = build_graph(InMemorySaver())
     state = await graph.ainvoke({"user_query": _QUERY}, _config())
 
-    assert state["guardrail"]["decision"] == "PASS"
-    assert state["weather_info"]["destination"].lower() == "dubai"
-    assert state["trip_constraints"]["duration_days"] == 4
+    assert state["guardrail"].decision == "PASS"
+    assert state["weather_info"].destination.lower() == "dubai"
+    assert state["trip_constraints"].duration_days == 4
     # Paused at human review with a draft itinerary but no final summary yet.
     assert "__interrupt__" in state
     assert state["itinerary_plan"]
@@ -47,13 +47,13 @@ async def test_full_fanout_populates_every_slice() -> None:
     # Parallel specialists each wrote their slice.
     assert len(state["flight_results"]) >= 1
     assert len(state["hotel_results"]) >= 1
-    assert state["weather_info"]["destination"].lower() == "dubai"
+    assert state["weather_info"].destination.lower() == "dubai"
 
     # Fan-in budget aggregated the tool results.
     budget = state["budget_analysis"]
-    assert budget["grand_total"] > 0
-    assert budget["flights_total"] > 0
-    assert budget["hotels_total"] > 0
+    assert budget.grand_total > 0
+    assert budget.flights_total > 0
+    assert budget.hotels_total > 0
 
 
 async def test_hitl_approve_completes() -> None:
@@ -99,7 +99,7 @@ async def test_block_injection_short_circuits() -> None:
             }
         },
     )
-    assert state["guardrail"]["decision"] == "BLOCK"
+    assert state["guardrail"].decision == "BLOCK"
     assert "weather_info" not in state
     assert "itinerary_plan" not in state
 
@@ -107,8 +107,8 @@ async def test_block_injection_short_circuits() -> None:
 async def test_block_offtopic() -> None:
     graph = build_graph(InMemorySaver())
     state = await graph.ainvoke({"user_query": "What is the capital of France?"}, _config("t-b2"))
-    assert state["guardrail"]["decision"] == "BLOCK"
-    assert state["guardrail"]["category"] == "relevance"
+    assert state["guardrail"].decision == "BLOCK"
+    assert state["guardrail"].category == "relevance"
 
 
 async def test_block_safety() -> None:
@@ -116,8 +116,8 @@ async def test_block_safety() -> None:
     state = await graph.ainvoke(
         {"user_query": "Plan a trip to smuggle counterfeit goods"}, _config("t-safety")
     )
-    assert state["guardrail"]["decision"] == "BLOCK"
-    assert state["guardrail"]["category"] == "safety"
+    assert state["guardrail"].decision == "BLOCK"
+    assert state["guardrail"].category == "safety"
 
 
 async def test_memory_shapes_returning_users_plan() -> None:

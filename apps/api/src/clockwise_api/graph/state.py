@@ -1,15 +1,25 @@
 """TravelState — the shared object that is the whole contract between agents.
 
-The shape mirrors the architecture's TravelState read/write map. The thin slice
-fills only a subset (constraints, weather, itinerary); the remaining fields are
-present so Phase 3 specialists just fill them in. `messages` and `llm_calls`
-use additive reducers so parallel fan-out (Phase 3) merges cleanly.
+Structured fields are the Pydantic models from `schemas.py`, so the state
+channel is typed and validated at the node that writes it — a bad write fails
+there, not at the response boundary. `messages` and `llm_calls` use additive
+reducers so parallel fan-out merges cleanly.
 """
 
 from __future__ import annotations
 
 import operator
 from typing import Annotated, Any, TypedDict
+
+from ..schemas import (
+    BudgetAnalysis,
+    FlightOption,
+    GuardrailDecision,
+    HotelOption,
+    ReviewDecision,
+    TripConstraints,
+    WeatherInfo,
+)
 
 
 class TravelState(TypedDict, total=False):
@@ -21,23 +31,23 @@ class TravelState(TypedDict, total=False):
     memory_saved: list[str]  # preferences persisted at the end of this run
 
     # Guardrail
-    guardrail: dict[str, Any]  # {"decision": "PASS"|"BLOCK", "reason": str}
+    guardrail: GuardrailDecision
 
     # Supervisor
-    trip_constraints: dict[str, Any]
+    trip_constraints: TripConstraints
     selected_agents: list[str]
     reasoning: str
 
     # Specialist outputs
-    flight_results: list[dict[str, Any]]
-    hotel_results: list[dict[str, Any]]
-    weather_info: dict[str, Any]
-    budget_analysis: dict[str, Any]
+    flight_results: list[FlightOption]
+    hotel_results: list[HotelOption]
+    weather_info: WeatherInfo
+    budget_analysis: BudgetAnalysis
     itinerary_plan: str
     summary: str
 
     # Human-in-the-loop review
-    review_decision: dict[str, Any]  # {"action": "approve"|"request_changes", "feedback": str}
+    review_decision: ReviewDecision
     revision_feedback: str
 
     # Cross-cutting

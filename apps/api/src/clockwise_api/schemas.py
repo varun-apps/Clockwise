@@ -17,6 +17,21 @@ PlanStatus = Literal["completed", "blocked", "awaiting_review"]
 ReviewAction = Literal["approve", "request_changes"]
 
 
+class GuardrailDecision(BaseModel):
+    """Guardrail node output: a PASS/BLOCK classification with a reason."""
+
+    decision: str = "BLOCK"  # "PASS" | "BLOCK"
+    category: str = "ok"
+    reason: str = ""
+
+
+class ReviewDecision(BaseModel):
+    """Human-review decision supplied on resume."""
+
+    action: str = "approve"  # "approve" | "request_changes"
+    feedback: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     env: str

@@ -33,11 +33,12 @@ async def save_memory_node(state: TravelState, config: RunnableConfig) -> dict[s
     memory = memory_from(config)
     gateway = gateway_from(config)
 
-    constraints = state.get("trip_constraints", {}) or {}
+    constraints = state.get("trip_constraints")
+    notes = constraints.notes if constraints else None
     sources = [
         state.get("user_query", ""),
         state.get("revision_feedback", ""),
-        str(constraints.get("notes") or ""),
+        str(notes or ""),
     ]
     deterministic = extract_preferences(*sources)
 

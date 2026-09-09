@@ -13,6 +13,8 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from ...observability import span
+from ...schemas import TripConstraints
+from ...specialists import TOOL_SPECIALISTS
 from ..state import TravelState
 from . import gateway_from
 
@@ -66,16 +68,13 @@ async def supervisor_node(state: TravelState, config: RunnableConfig) -> dict[st
             user=query,
             mock=_heuristic(query),
         )
+    raw_constraints = data.get("trip_constraints") or {}
     return {
-        "trip_constraints": data.get("trip_constraints", {}),
+        "trip_constraints": TripConstraints(**raw_constraints),
         "selected_agents": data.get("selected_agents", ["weather", "itinerary"]),
         "reasoning": data.get("reasoning", ""),
         "llm_calls": [call.as_call_record()],
     }
-
-
-# Tool specialists that participate in the parallel fan-out.
-_FANOUT_AGENTS = ("flight", "hotel", "weather")
 
 
 def route_to_specialists(state: TravelState) -> list[str]:
@@ -85,5 +84,5 @@ def route_to_specialists(state: TravelState) -> list[str]:
     selected, routes straight to budget (the fan-in convergence node).
     """
     selected = state.get("selected_agents", []) or []
-    fanout = [a for a in _FANOUT_AGENTS if a in selected]
+    fanout = [a for a in TOOL_SPECIALISTS if a in selected]
     return fanout or ["budget"]

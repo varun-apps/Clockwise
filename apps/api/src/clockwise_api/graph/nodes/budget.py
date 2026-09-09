@@ -12,6 +12,7 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from ...observability import span
+from ...schemas import BudgetAnalysis, FlightOption, HotelOption
 from ..state import TravelState
 from . import gateway_from
 
@@ -24,22 +25,30 @@ _SYSTEM = (
 _DAILY_SPEND = 75.0  # per-day food/local transport estimate
 
 
-def _cheapest(options: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
-    priced = [o for o in options if o.get(key) is not None]
-    return min(priced, key=lambda o: o[key]) if priced else None
+def _cheapest_flight(flights: list[FlightOption]) -> FlightOption | None:
+    return min(flights, key=lambda f: f.price) if flights else None
+
+
+def _cheapest_hotel(hotels: list[HotelOption]) -> HotelOption | None:
+    if not hotels:
+        return None
+    with_total = [h for h in hotels if h.total is not None]
+    if with_total:
+        return min(with_total, key=lambda h: h.total or 0.0)
+    return min(hotels, key=lambda h: h.price_per_night)
 
 
 def _mock_budget(state: TravelState) -> dict[str, Any]:
-    constraints = state.get("trip_constraints", {}) or {}
-    days = int(constraints.get("duration_days") or 3)
+    constraints = state.get("trip_constraints")
+    days = (constraints.duration_days if constraints else None) or 3
     flights = state.get("flight_results", []) or []
     hotels = state.get("hotel_results", []) or []
 
-    cheap_flight = _cheapest(flights, "price")
-    cheap_hotel = _cheapest(hotels, "total") or _cheapest(hotels, "price_per_night")
+    cheap_flight = _cheapest_flight(flights)
+    cheap_hotel = _cheapest_hotel(hotels)
 
-    flights_total = float(cheap_flight["price"]) if cheap_flight else 0.0
-    hotels_total = float(cheap_hotel.get("total") or 0.0) if cheap_hotel else 0.0
+    flights_total = cheap_flight.price if cheap_flight else 0.0
+    hotels_total = (cheap_hotel.total or 0.0) if cheap_hotel else 0.0
     daily = _DAILY_SPEND
     grand_total = round(flights_total + hotels_total + daily * days, 2)
 
@@ -66,4 +75,4 @@ async def budget_node(state: TravelState, config: RunnableConfig) -> dict[str, A
             ),
             mock=_mock_budget(state),
         )
-    return {"budget_analysis": data, "llm_calls": [call.as_call_record()]}
+    return {"budget_analysis": BudgetAnalysis(**data), "llm_calls": [call.as_call_record()]}
