@@ -19,10 +19,12 @@ style long-term memory) — Postgres in prod, in-memory otherwise.
 
 from __future__ import annotations
 
+from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any
 
 from langgraph.graph import END, START, StateGraph
 
+from ..specialists import TOOL_SPECIALISTS
 from .nodes.budget import budget_node
 from .nodes.final import final_node
 from .nodes.flight import flight_node
@@ -40,8 +42,12 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
     from langgraph.store.base import BaseStore
 
-# Tool specialists that fan out in parallel and fan back in to budget.
-_SPECIALISTS = ("flight", "hotel", "weather")
+# Fan-out edges: each tool specialist routes to itself; when none is selected the
+# fallback routes straight to budget (the fan-in convergence node).
+_FANOUT_EDGES: dict[Hashable, str] = {}
+for name in TOOL_SPECIALISTS:
+    _FANOUT_EDGES[name] = name
+_FANOUT_EDGES["budget"] = "budget"
 
 
 def build_graph(
@@ -74,10 +80,10 @@ def build_graph(
     builder.add_conditional_edges(
         "supervisor",
         route_to_specialists,
-        {"flight": "flight", "hotel": "hotel", "weather": "weather", "budget": "budget"},
+        _FANOUT_EDGES,
     )
     # Fan-in: budget runs once after the scheduled specialists converge.
-    for specialist in _SPECIALISTS:
+    for specialist in TOOL_SPECIALISTS:
         builder.add_edge(specialist, "budget")
     builder.add_edge("budget", "itinerary")
     builder.add_edge("itinerary", "human_review")

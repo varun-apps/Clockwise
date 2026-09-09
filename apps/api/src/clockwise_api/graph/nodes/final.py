@@ -23,12 +23,12 @@ _SYSTEM = (
 
 
 def _mock_summary(state: TravelState) -> str:
-    constraints = state.get("trip_constraints", {}) or {}
-    budget = state.get("budget_analysis", {}) or {}
-    destination = constraints.get("destination") or "your destination"
-    days = constraints.get("duration_days") or 3
-    total = budget.get("grand_total")
-    currency = budget.get("currency", "USD")
+    constraints = state.get("trip_constraints")
+    budget = state.get("budget_analysis")
+    destination = (constraints.destination if constraints else None) or "your destination"
+    days = (constraints.duration_days if constraints else None) or 3
+    total = budget.grand_total if budget else None
+    currency = (budget.currency if budget else None) or "USD"
     cost = f" Estimated total: {currency} {total:,.0f}." if total else ""
     return (
         f"Here's your {days}-day plan for {destination}, with weather-aware "

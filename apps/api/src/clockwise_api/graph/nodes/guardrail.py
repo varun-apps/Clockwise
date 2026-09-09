@@ -12,6 +12,7 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from ...observability import span
+from ...schemas import GuardrailDecision
 from ..state import TravelState
 from . import gateway_from
 
@@ -110,10 +111,11 @@ async def guardrail_node(state: TravelState, config: RunnableConfig) -> dict[str
         )
     decision.setdefault("decision", "BLOCK")
     decision.setdefault("reason", "Unclassifiable request.")
-    return {"guardrail": decision, "llm_calls": [call.as_call_record()]}
+    return {"guardrail": GuardrailDecision(**decision), "llm_calls": [call.as_call_record()]}
 
 
 def route_after_guardrail(state: TravelState) -> str:
     """Conditional edge: PASS -> load_memory (then plan), BLOCK -> END."""
-    decision = state.get("guardrail", {}).get("decision", "BLOCK")
+    guardrail = state.get("guardrail")
+    decision = guardrail.decision if guardrail is not None else "BLOCK"
     return "load_memory" if decision == "PASS" else "__end__"

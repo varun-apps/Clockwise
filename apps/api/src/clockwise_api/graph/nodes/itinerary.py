@@ -23,11 +23,11 @@ _SYSTEM = (
 
 
 def _mock_plan(state: TravelState) -> str:
-    constraints = state.get("trip_constraints", {}) or {}
-    weather = state.get("weather_info", {}) or {}
+    constraints = state.get("trip_constraints")
+    weather = state.get("weather_info")
     hotels = state.get("hotel_results", []) or []
-    destination = constraints.get("destination") or "your destination"
-    days = int(constraints.get("duration_days") or 3)
+    destination = (constraints.destination if constraints else None) or "your destination"
+    days = (constraints.duration_days if constraints else None) or 3
 
     hotel = hotels[0] if hotels else None
     feedback = state.get("revision_feedback")
@@ -40,12 +40,11 @@ def _mock_plan(state: TravelState) -> str:
         lines.append(f"_Personalized from your saved preferences: {', '.join(prefs)}._")
         lines.append("")
     if weather:
-        lines.append(
-            f"_Weather: {weather.get('summary', 'n/a')} "
-            f"(avg {weather.get('avg_low_c', '?')}–{weather.get('avg_high_c', '?')}°C)_"
-        )
+        low = weather.avg_low_c if weather.avg_low_c is not None else "?"
+        high = weather.avg_high_c if weather.avg_high_c is not None else "?"
+        lines.append(f"_Weather: {weather.summary} (avg {low}–{high}°C)_")
     if hotel:
-        lines.append(f"_Staying at {hotel['name']} ({hotel.get('area', 'central')})._")
+        lines.append(f"_Staying at {hotel.name} ({hotel.area or 'central'})._")
     lines.append("")
 
     # Preferences shape the actual days, not just a header.

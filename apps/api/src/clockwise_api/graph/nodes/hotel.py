@@ -9,15 +9,19 @@ from __future__ import annotations
 from typing import Any
 
 from ...observability import span
+from ...schemas import HotelOption
 from ...tools.hotels import get_hotels
 from ..state import TravelState
 
 
 async def hotel_node(state: TravelState) -> dict[str, Any]:
-    constraints = state.get("trip_constraints", {}) or {}
+    constraints = state.get("trip_constraints")
+    destination = constraints.destination if constraints else None
+    nights = constraints.duration_days if constraints else None
     with span("node.hotel"):
-        results = get_hotels(constraints.get("destination"), constraints.get("duration_days"))
+        results = get_hotels(destination, nights)
+    hotels = [HotelOption(**o) for o in results]
     return {
-        "hotel_results": results,
-        "messages": [{"role": "assistant", "content": f"Found {len(results)} hotel options."}],
+        "hotel_results": hotels,
+        "messages": [{"role": "assistant", "content": f"Found {len(hotels)} hotel options."}],
     }
