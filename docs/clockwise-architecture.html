@@ -265,7 +265,7 @@
   <div class="wrap">
     <div class="kicker"><span class="dot"></span> CLOCKWISE · SYSTEM SCHEMATICS · v0 ARCHITECTURE</div>
     <h1>Multi-agent trip planning,<br>drawn end to end.</h1>
-    <p class="lede">A supervisor routes a request across specialist agents over a shared state object, pauses for human review, then answers — all resumable and traced. <strong>FastAPI · LangGraph · LangMem · DeepSeek V4 Flash · React + TanStack.</strong> The color code below reads the same in every diagram.</p>
+    <p class="lede">A supervisor routes a request across specialist agents over a shared state object, pauses for human review, then answers — all resumable and traced. <strong>Node + Hono · LangGraph · LangMem · DeepSeek V4 Flash · React + TanStack.</strong> The color code below reads the same in every diagram.</p>
     <div class="legend">
       <div class="k"><span class="swatch" style="background:var(--c-guard)"></span>Guardrail</div>
       <div class="k"><span class="swatch" style="background:var(--c-super)"></span>Supervisor</div>
@@ -310,7 +310,7 @@
               </div></div>
               <div class="conn"></div>
               <div class="node n-super"><div class="node__ic">API</div><div class="node__body">
-                <div class="node__head"><span class="node__title">FastAPI + worker</span><span class="node__meta">async · SSE/WS</span></div>
+                <div class="node__head"><span class="node__title">Node + Hono + worker</span><span class="node__meta">async · SSE/WS</span></div>
                 <div class="node__desc">HTTP + streaming edge. Owns sessions; hands orchestration to the graph.</div>
               </div></div>
               <div class="conn"></div>
@@ -494,7 +494,7 @@
     <div class="sec-head"><span class="sec-num">04</span><h2>Human-in-the-loop &amp; durable execution</h2></div>
     <p class="sec-intro">The non-obvious part. The review pause can last minutes, so the request can't be held open. The graph runs to the interrupt, checkpoints, and returns — a later call resumes from that exact point.</p>
     <div class="panel">
-      <div class="lane-head"><div>CLIENT (React)</div><div>SERVER (FastAPI + graph)</div></div>
+      <div class="lane-head"><div>CLIENT (React)</div><div>SERVER (Node + Hono + graph)</div></div>
       <div class="steps">
         <div class="step">
           <div class="bubble client"><span class="n">1 · request</span><code>POST /plan</code> with the query</div>
@@ -634,7 +634,7 @@
     <p class="sec-intro">The one piece of monorepo plumbing that pays for itself: the backend's own schema generates the frontend's types, so the two halves can't silently drift.</p>
     <div class="panel">
       <div class="hflow">
-        <div class="node n-super tiny" style="max-width:160px"><div class="node__body"><div class="node__head"><span class="node__title">FastAPI</span></div><div class="node__desc">Pydantic models</div></div></div>
+        <div class="node n-super tiny" style="max-width:160px"><div class="node__body"><div class="node__head"><span class="node__title">Node + Hono</span></div><div class="node__desc">Zod models</div></div></div>
         <div class="hconn"><span class="ar">→</span><span class="l">emits</span></div>
         <div class="node n-state tiny" style="max-width:160px"><div class="node__body"><div class="node__head"><span class="node__title">OpenAPI spec</span></div><div class="node__desc">generated</div></div></div>
         <div class="hconn"><span class="ar">→</span><span class="l">codegen</span></div>
@@ -642,7 +642,7 @@
         <div class="hconn"><span class="ar">→</span><span class="l">consumed</span></div>
         <div class="node n-spec tiny" style="max-width:170px"><div class="node__body"><div class="node__head"><span class="node__title">TanStack Query</span></div><div class="node__desc">type-safe calls</div></div></div>
       </div>
-      <div class="note"><b>Payoff:</b> rename a field in a Pydantic model and the frontend fails to type-check until it's updated — drift becomes a build error, not a production bug.</div>
+      <div class="note"><b>Payoff:</b> rename a field in a Zod model and the frontend fails to type-check until it's updated — drift becomes a build error, not a production bug.</div>
     </div>
   </section>
 

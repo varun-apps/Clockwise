@@ -2,15 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(task:*)",
-      "Bash(uv:*)",
-      "Bash(uv run:*)",
       "Bash(pnpm:*)",
       "Bash(pnpm run:*)",
       "Bash(pnpm --filter:*)",
-      "Bash(alembic:*)",
-      "Bash(pytest:*)",
-      "Bash(ruff:*)",
-      "Bash(mypy:*)",
+      "Bash(tsx:*)",
+      "Bash(npx:*)",
+      "Bash(vitest:*)",
+      "Bash(tsc:*)",
       "Bash(docker compose:*)",
       "Bash(curl:*)"
     ]

@@ -1,19 +1,19 @@
 ---
 name: contract-sync
-description: Use after changing FastAPI Pydantic schemas/routes in ClockWise to regenerate the frontend's typed API client and confirm the two halves haven't drifted.
+description: Use after changing the backend Zod schemas/routes in ClockWise to regenerate the frontend's typed API client and confirm the two halves haven't drifted.
 ---
 
 # Contract sync
 
 ClockWise's backend OpenAPI schema generates the frontend's TypeScript client.
-Whenever you change `apps/api/src/clockwise_api/schemas.py` (or add/change a
-route), regenerate so the frontend can't silently drift.
+Whenever you change `apps/api/src/dto.ts` (or add/change a route), regenerate so
+the frontend can't silently drift.
 
 ## Steps
 
 ```bash
-# 1. Dump the OpenAPI schema from the FastAPI app
-cd apps/api && uv run python -m clockwise_api.openapi_export ../../openapi.json
+# 1. Dump the OpenAPI schema from the Hono app
+cd apps/api && pnpm exec tsx src/openapi-export.ts ../../openapi.json
 
 # 2. Generate the typed TS client
 cd ../.. && pnpm run codegen        # openapi-typescript openapi.json -> apps/web/src/api/generated.ts
@@ -32,10 +32,11 @@ pnpm run web:typecheck
   `generated.ts`. If you renamed a field, step 3 will fail there until the
   frontend is updated — **that failure is the point**: drift is now a build
   error, not a production bug.
-- Pydantic fields with `default_factory` become optional in the generated types
-  — guard them on the frontend (`data.field ?? []`).
+- Schemas the frontend references by name use `.openapi("<RefId>")` in `dto.ts`
+  (see `HealthResponse`, `ConversationRead`, `ConversationDetail`, `MessageRead`).
 
 ## Verify
 
 `pnpm run lint && pnpm run web:typecheck && pnpm --filter @clockwise/web build`
 should all pass after syncing.
+

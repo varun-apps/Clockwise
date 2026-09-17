@@ -1,25 +1,8 @@
 # Install: pipx install pre-commit && pre-commit install
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
-    hooks:
-      - id: ruff
-        args: [--fix]
-        files: ^apps/api/
-      - id: ruff-format
-        files: ^apps/api/
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
-    hooks:
-      - id: mypy
-        files: ^apps/api/src/
-        additional_dependencies:
-          - pydantic
-          - pydantic-settings
-
   - repo: https://github.com/biomejs/pre-commit
     rev: v2.3.0
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@2.3.0"]
+
