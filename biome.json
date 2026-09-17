@@ -4,6 +4,7 @@
   "files": {
     "includes": [
       "apps/web/src/**",
+      "apps/api/**",
       "packages/**/*.ts",
       "*.json",
       "!**/generated.ts",

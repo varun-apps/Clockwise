@@ -1,7 +1,7 @@
 # ClockWise task orchestrator — requires go-task (https://taskfile.dev)
 #   macOS: brew install go-task/tap/go-task
-# Each task below has an equivalent raw command noted, so `task` is a
-# convenience, not a hard dependency.
+# Every task also has a raw pnpm equivalent, so `task` is a convenience, not a
+# hard dependency.
 version: "3"
 
 env:
@@ -15,13 +15,12 @@ tasks:
       - task --list
 
   install:
-    desc: Install all deps (Python via uv, JS via pnpm)
+    desc: Install all dependencies (pnpm)
     cmds:
-      - cd {{.API_DIR}} && uv sync
       - pnpm install
 
   up:
-    desc: Start Postgres + Langfuse via docker-compose
+    desc: Start Postgres (and optional Langfuse) via docker-compose
     cmds:
       - docker compose up -d
 
@@ -30,53 +29,40 @@ tasks:
     cmds:
       - docker compose down
 
-  migrate:
-    desc: Run Alembic migrations
-    cmds:
-      - cd {{.API_DIR}} && uv run alembic upgrade head
-
   api:
-    desc: Run the FastAPI dev server (hot reload)
+    desc: Run the Node/Hono API dev server (hot reload)
     cmds:
-      - cd {{.API_DIR}} && uv run uvicorn clockwise_api.main:app --reload --port 8000
+      - cd {{.API_DIR}} && pnpm dev
 
   web:
     desc: Run the Vite dev server
     cmds:
       - pnpm --filter @clockwise/web dev
 
-  dev:
-    desc: Bring up infra, then run api + web together
-    deps: [up]
-    cmds:
-      - task: api
-      - task: web
-
   codegen:
-    desc: Dump FastAPI OpenAPI schema and regenerate the typed TS client
+    desc: Dump the OpenAPI schema and regenerate the typed TS client
     cmds:
-      - cd {{.API_DIR}} && uv run python -m clockwise_api.openapi_export ../../openapi.json
+      - cd {{.API_DIR}} && pnpm exec tsx src/openapi-export.ts ../../openapi.json
       - pnpm run codegen
 
   lint:
-    desc: Lint both stacks
+    desc: Lint both stacks (Biome)
     cmds:
-      - cd {{.API_DIR}} && uv run ruff check .
       - pnpm run lint
 
   format:
-    desc: Format both stacks
+    desc: Format both stacks (Biome)
     cmds:
-      - cd {{.API_DIR}} && uv run ruff format .
       - pnpm run format
 
   typecheck:
     desc: Type-check both stacks
     cmds:
-      - cd {{.API_DIR}} && uv run mypy src
+      - pnpm run api:typecheck
       - pnpm run web:typecheck
 
   test:
-    desc: Run backend tests (offline, on mocks)
+    desc: Run backend tests (offline, on injected test doubles)
     cmds:
-      - cd {{.API_DIR}} && uv run pytest
+      - pnpm run api:test
+

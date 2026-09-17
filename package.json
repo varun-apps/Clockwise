@@ -9,9 +9,13 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "codegen": "openapi-typescript openapi.json -o apps/web/src/api/generated.ts",
+    "api:dev": "pnpm --filter @clockwise/api dev",
+    "api:typecheck": "pnpm --filter @clockwise/api typecheck",
+    "api:test": "pnpm --filter @clockwise/api test",
     "web:dev": "pnpm --filter @clockwise/web dev",
     "web:build": "pnpm --filter @clockwise/web build",
-    "web:typecheck": "pnpm --filter @clockwise/web typecheck"
+    "web:typecheck": "pnpm --filter @clockwise/web typecheck",
+    "web:test": "pnpm --filter @clockwise/web test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.0",

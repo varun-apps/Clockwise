@@ -11,8 +11,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Health */
-        get: operations["health_health_get"];
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liveness + mode report */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HealthResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         post?: never;
         delete?: never;
@@ -28,8 +46,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Conversations */
-        get: operations["list_conversations_conversations_get"];
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List conversations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConversationRead"][];
+                    };
+                };
+            };
+        };
         put?: never;
         post?: never;
         delete?: never;
@@ -45,8 +81,39 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Conversation */
-        get: operations["get_conversation_conversations__conversation_id__get"];
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    conversation_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One conversation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConversationDetail"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            detail: string;
+                        };
+                    };
+                };
+            };
+        };
         put?: never;
         post?: never;
         delete?: never;
@@ -64,8 +131,125 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Plan */
-        post: operations["plan_plan_post"];
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description Free-text trip request */
+                        query: string;
+                        /**
+                         * Format: uuid
+                         * @description Continue an existing conversation, or omit to start one
+                         */
+                        conversation_id?: string | null;
+                        /**
+                         * @description Stable id used to load/save preferences
+                         * @default anonymous
+                         */
+                        user_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Plan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            conversation_id: string;
+                            thread_id: string;
+                            /** @enum {string} */
+                            status: "completed" | "blocked" | "awaiting_review";
+                            blocked_reason?: string | null;
+                            reasoning?: string | null;
+                            /** @default [] */
+                            selected_agents: ("flight" | "hotel" | "weather" | "budget" | "itinerary")[];
+                            trip_constraints?: {
+                                destination?: string | null;
+                                origin?: string | null;
+                                duration_days?: number | null;
+                                start_date?: string | null;
+                                travelers?: number | null;
+                                budget?: number | null;
+                                notes?: string | null;
+                            } | null;
+                            weather?: {
+                                destination: string;
+                                summary: string;
+                                avg_high_c?: number | null;
+                                avg_low_c?: number | null;
+                                /** @default [] */
+                                conditions: string[];
+                            } | null;
+                            /** @default [] */
+                            flights: {
+                                airline: string;
+                                flight_number: string;
+                                origin: string;
+                                destination: string;
+                                depart_time?: string | null;
+                                price: number;
+                                /** @default USD */
+                                currency: string;
+                                duration?: string | null;
+                            }[];
+                            /** @default [] */
+                            hotels: {
+                                name: string;
+                                area?: string | null;
+                                rating?: number | null;
+                                price_per_night: number;
+                                /** @default USD */
+                                currency: string;
+                                nights?: number | null;
+                                total?: number | null;
+                            }[];
+                            budget?: {
+                                /** @default USD */
+                                currency: string;
+                                flights_total?: number | null;
+                                hotels_total?: number | null;
+                                daily_estimate?: number | null;
+                                grand_total?: number | null;
+                                notes?: string | null;
+                            } | null;
+                            itinerary_plan?: string | null;
+                            summary?: string | null;
+                            /** @default [] */
+                            memory_used: string[];
+                            /** @default [] */
+                            llm_calls: {
+                                node: string;
+                                model: string;
+                                mocked: boolean;
+                                prompt_tokens?: number | null;
+                                completion_tokens?: number | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            detail: string;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -81,42 +265,136 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resume */
-        post: operations["resume_plan_resume_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plan/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description The paused conversation to resume
+                         */
+                        conversation_id: string;
+                        /**
+                         * @description approve the itinerary or request changes
+                         * @enum {string}
+                         */
+                        action: "approve" | "request_changes";
+                        /** @description What to change (when request_changes) */
+                        feedback?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Plan */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            conversation_id: string;
+                            thread_id: string;
+                            /** @enum {string} */
+                            status: "completed" | "blocked" | "awaiting_review";
+                            blocked_reason?: string | null;
+                            reasoning?: string | null;
+                            /** @default [] */
+                            selected_agents: ("flight" | "hotel" | "weather" | "budget" | "itinerary")[];
+                            trip_constraints?: {
+                                destination?: string | null;
+                                origin?: string | null;
+                                duration_days?: number | null;
+                                start_date?: string | null;
+                                travelers?: number | null;
+                                budget?: number | null;
+                                notes?: string | null;
+                            } | null;
+                            weather?: {
+                                destination: string;
+                                summary: string;
+                                avg_high_c?: number | null;
+                                avg_low_c?: number | null;
+                                /** @default [] */
+                                conditions: string[];
+                            } | null;
+                            /** @default [] */
+                            flights: {
+                                airline: string;
+                                flight_number: string;
+                                origin: string;
+                                destination: string;
+                                depart_time?: string | null;
+                                price: number;
+                                /** @default USD */
+                                currency: string;
+                                duration?: string | null;
+                            }[];
+                            /** @default [] */
+                            hotels: {
+                                name: string;
+                                area?: string | null;
+                                rating?: number | null;
+                                price_per_night: number;
+                                /** @default USD */
+                                currency: string;
+                                nights?: number | null;
+                                total?: number | null;
+                            }[];
+                            budget?: {
+                                /** @default USD */
+                                currency: string;
+                                flights_total?: number | null;
+                                hotels_total?: number | null;
+                                daily_estimate?: number | null;
+                                grand_total?: number | null;
+                                notes?: string | null;
+                            } | null;
+                            itinerary_plan?: string | null;
+                            summary?: string | null;
+                            /** @default [] */
+                            memory_used: string[];
+                            /** @default [] */
+                            llm_calls: {
+                                node: string;
+                                model: string;
+                                mocked: boolean;
+                                prompt_tokens?: number | null;
+                                completion_tokens?: number | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            detail: string;
+                        };
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            detail: string;
+                        };
+                    };
+                };
+            };
         };
-        get?: never;
-        put?: never;
-        /** Plan Stream */
-        post: operations["plan_stream_plan_stream_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plan/resume/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resume Stream */
-        post: operations["resume_stream_plan_resume_stream_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -127,285 +405,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BudgetAnalysis */
-        BudgetAnalysis: {
-            /**
-             * Currency
-             * @default USD
-             */
-            currency: string;
-            /** Flights Total */
-            flights_total?: number | null;
-            /** Hotels Total */
-            hotels_total?: number | null;
-            /** Daily Estimate */
-            daily_estimate?: number | null;
-            /** Grand Total */
-            grand_total?: number | null;
-            /** Notes */
-            notes?: string | null;
-        };
-        /** ConversationDetail */
-        ConversationDetail: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Thread Id */
-            thread_id: string;
-            /** Title */
-            title: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /** Messages */
-            messages?: components["schemas"]["MessageRead"][];
-        };
-        /** ConversationRead */
-        ConversationRead: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Thread Id */
-            thread_id: string;
-            /** Title */
-            title: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /** FlightOption */
-        FlightOption: {
-            /** Airline */
-            airline: string;
-            /** Flight Number */
-            flight_number: string;
-            /** Origin */
-            origin: string;
-            /** Destination */
-            destination: string;
-            /** Depart Time */
-            depart_time?: string | null;
-            /** Price */
-            price: number;
-            /**
-             * Currency
-             * @default USD
-             */
-            currency: string;
-            /** Duration */
-            duration?: string | null;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** HealthResponse */
         HealthResponse: {
-            /**
-             * Status
-             * @default ok
-             * @constant
-             */
+            /** @enum {string} */
             status: "ok";
-            /** Env */
             env: string;
-            /**
-             * Llm Mode
-             * @enum {string}
-             */
+            /** @enum {string} */
             llm_mode: "live" | "mock";
-            /**
-             * Langfuse
-             * @enum {string}
-             */
+            /** @enum {string} */
             langfuse: "enabled" | "disabled";
         };
-        /** HotelOption */
-        HotelOption: {
-            /** Name */
-            name: string;
-            /** Area */
-            area?: string | null;
-            /** Rating */
-            rating?: number | null;
-            /** Price Per Night */
-            price_per_night: number;
-            /**
-             * Currency
-             * @default USD
-             */
-            currency: string;
-            /** Nights */
-            nights?: number | null;
-            /** Total */
-            total?: number | null;
-        };
-        /** LLMCall */
-        LLMCall: {
-            /** Node */
-            node: string;
-            /** Model */
-            model: string;
-            /** Mocked */
-            mocked: boolean;
-            /** Prompt Tokens */
-            prompt_tokens?: number | null;
-            /** Completion Tokens */
-            completion_tokens?: number | null;
-        };
-        /** MessageRead */
-        MessageRead: {
-            /**
-             * Id
-             * Format: uuid
-             */
+        ConversationRead: {
+            /** Format: uuid */
             id: string;
-            /** Role */
-            role: string;
-            /** Content */
-            content: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-        };
-        /** PlanRequest */
-        PlanRequest: {
-            /**
-             * Query
-             * @description Free-text trip request
-             */
-            query: string;
-            /**
-             * Conversation Id
-             * @description Continue an existing conversation, or omit to start one
-             */
-            conversation_id?: string | null;
-            /**
-             * User Id
-             * @description Stable id used to load/save long-term preferences
-             * @default anonymous
-             */
-            user_id: string;
-        };
-        /** PlanResponse */
-        PlanResponse: {
-            /**
-             * Conversation Id
-             * Format: uuid
-             */
-            conversation_id: string;
-            /** Thread Id */
             thread_id: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "completed" | "blocked" | "awaiting_review";
-            /** Blocked Reason */
-            blocked_reason?: string | null;
-            /** Reasoning */
-            reasoning?: string | null;
-            /** Selected Agents */
-            selected_agents?: ("flight" | "hotel" | "weather" | "budget" | "itinerary")[];
-            trip_constraints?: components["schemas"]["TripConstraints"] | null;
-            weather?: components["schemas"]["WeatherInfo"] | null;
-            /** Flights */
-            flights?: components["schemas"]["FlightOption"][];
-            /** Hotels */
-            hotels?: components["schemas"]["HotelOption"][];
-            budget?: components["schemas"]["BudgetAnalysis"] | null;
-            /** Itinerary Plan */
-            itinerary_plan?: string | null;
-            /** Summary */
-            summary?: string | null;
-            /** Memory Used */
-            memory_used?: string[];
-            /** Llm Calls */
-            llm_calls?: components["schemas"]["LLMCall"][];
+            title?: string | null;
+            created_at: string;
+            updated_at: string;
         };
-        /** ResumeRequest */
-        ResumeRequest: {
-            /**
-             * Conversation Id
-             * Format: uuid
-             * @description The paused conversation to resume
-             */
-            conversation_id: string;
-            /**
-             * Action
-             * @description approve the itinerary or request changes
-             * @enum {string}
-             */
-            action: "approve" | "request_changes";
-            /**
-             * Feedback
-             * @description What to change (used when action is request_changes)
-             */
-            feedback?: string | null;
+        ConversationDetail: components["schemas"]["ConversationRead"] & {
+            /** @default [] */
+            messages: components["schemas"]["MessageRead"][];
         };
-        /** TripConstraints */
-        TripConstraints: {
-            /** Destination */
-            destination?: string | null;
-            /** Origin */
-            origin?: string | null;
-            /** Duration Days */
-            duration_days?: number | null;
-            /** Start Date */
-            start_date?: string | null;
-            /** Travelers */
-            travelers?: number | null;
-            /** Budget */
-            budget?: number | null;
-            /** Notes */
-            notes?: string | null;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
-        /** WeatherInfo */
-        WeatherInfo: {
-            /** Destination */
-            destination: string;
-            /** Summary */
-            summary: string;
-            /** Avg High C */
-            avg_high_c?: number | null;
-            /** Avg Low C */
-            avg_low_c?: number | null;
-            /** Conditions */
-            conditions?: string[];
+        MessageRead: {
+            /** Format: uuid */
+            id: string;
+            role: string;
+            content: string;
+            created_at: string;
         };
     };
     responses: never;
@@ -415,208 +441,4 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export interface operations {
-    health_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
-    list_conversations_conversations_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationRead"][];
-                };
-            };
-        };
-    };
-    get_conversation_conversations__conversation_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                conversation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConversationDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    plan_plan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    resume_plan_resume_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResumeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    plan_stream_plan_stream_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlanRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    resume_stream_plan_resume_stream_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResumeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-}
+export type operations = Record<string, never>;
